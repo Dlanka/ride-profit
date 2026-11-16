@@ -7,22 +7,39 @@ import {
 import { calcTripCostDetails, formatLKR } from '../utils/calculations';
 
 export default function TripCostTab({ t, settings }) {
+  const [calcMode, setCalcMode] = useState('direct'); // 'direct' | 'odometer'
   const [distance, setDistance] = useState('');
+  const [startOdo, setStartOdo] = useState('');
+  const [endOdo, setEndOdo] = useState('');
   const [isReturnTrip, setIsReturnTrip] = useState(false);
+
+  // Live real-time odometer net calculation
+  const odoDistance = useMemo(() => {
+    const s = parseFloat(startOdo);
+    const e = parseFloat(endOdo);
+    if (!isNaN(s) && !isNaN(e) && e >= s) {
+      return parseFloat((e - s).toFixed(1));
+    }
+    return 0;
+  }, [startOdo, endOdo]);
+
+  // Active distance for trip calculation
+  const activeDistance = calcMode === 'direct' ? parseFloat(distance) || 0 : odoDistance;
 
   // Live real-time trip calculation
   const tripDetails = useMemo(() => {
-    const d = parseFloat(distance);
-    if (!d || d <= 0) return null;
+    if (!activeDistance || activeDistance <= 0) return null;
     return calcTripCostDetails({
-      distance: d,
-      isReturnTrip,
+      distance: activeDistance,
+      isReturnTrip: calcMode === 'direct' ? isReturnTrip : false,
       settings,
     });
-  }, [distance, isReturnTrip, settings]);
+  }, [activeDistance, calcMode, isReturnTrip, settings]);
 
   const handleClear = () => {
     setDistance('');
+    setStartOdo('');
+    setEndOdo('');
     setIsReturnTrip(false);
   };
 
@@ -42,7 +59,7 @@ export default function TripCostTab({ t, settings }) {
           </div>
         </div>
 
-        {distance && (
+        {(distance || startOdo || endOdo) && (
           <button
             type="button"
             onClick={handleClear}
@@ -56,83 +73,182 @@ export default function TripCostTab({ t, settings }) {
 
       {/* Input Card */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3.5 shadow-lg shadow-black/20">
-        {/* Planned Trip Distance */}
-        <div>
-          <label className="text-xs font-bold text-slate-300 flex items-center justify-between mb-1.5">
-            <span className="flex items-center gap-1.5">
-              <Route className="w-4 h-4 text-sky-400" />
-              {t.plannedDistance}
-            </span>
-            <span className="text-[10px] text-slate-500 font-mono">One-Way KM</span>
-          </label>
-          <div className="relative">
-            <input
-              type="number"
-              step="0.5"
-              value={distance}
-              onChange={(e) => setDistance(e.target.value)}
-              placeholder="0"
-              autoFocus
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-3 text-slate-100 placeholder-slate-600 font-mono text-xl font-bold focus:border-sky-500 focus:ring-1 focus:ring-sky-500/50 outline-none transition-all"
-            />
-            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 font-mono">
-              km
-            </span>
-          </div>
-
-          {/* Quick Distance Chips */}
-          <div className="flex items-center gap-1.5 mt-2 overflow-x-auto no-scrollbar py-0.5">
-            <span className="text-[10px] text-slate-500 font-mono shrink-0">KM:</span>
-            {quickDistances.map((km) => (
-              <button
-                key={km}
-                type="button"
-                onClick={() => setDistance(String(km))}
-                className={`text-[11px] px-2 py-0.5 rounded-lg border font-mono transition-all shrink-0 ${
-                  distance === String(km)
-                    ? 'bg-sky-500/20 border-sky-500/50 text-sky-300 font-bold'
-                    : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
-                }`}
-              >
-                {km}km
-              </button>
-            ))}
-          </div>
+        {/* Calculation Mode Toggle Segmented Pills */}
+        <div className="flex bg-slate-950 border border-slate-800 rounded-xl p-1">
+          <button
+            type="button"
+            onClick={() => setCalcMode('direct')}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              calcMode === 'direct'
+                ? 'bg-sky-500/20 border border-sky-500/50 text-sky-300 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Route className="w-3.5 h-3.5" />
+            <span>{t.directKm}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCalcMode('odometer')}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              calcMode === 'odometer'
+                ? 'bg-purple-500/20 border border-purple-500/50 text-purple-300 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Gauge className="w-3.5 h-3.5" />
+            <span>{t.odometerReadings}</span>
+          </button>
         </div>
 
-        {/* Journey Type 2-Option Selector */}
-        <div>
-          <label className="text-xs font-bold text-slate-300 block mb-1.5 uppercase tracking-wider">
-            {t.tripType}
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setIsReturnTrip(false)}
-              className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center ${
-                !isReturnTrip
-                  ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-300 shadow-sm'
-                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
-              }`}
-            >
-              <span className="block leading-tight">{t.oneWayTrip}</span>
-              <span className="text-[10px] text-slate-500 font-mono font-normal">1x Running Cost</span>
-            </button>
+        {/* Mode 1: Direct KM Input */}
+        {calcMode === 'direct' ? (
+          <>
+            <div>
+              <label className="text-xs font-bold text-slate-300 flex items-center justify-between mb-1.5">
+                <span className="flex items-center gap-1.5">
+                  <Route className="w-4 h-4 text-sky-400" />
+                  {t.plannedDistance}
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">One-Way KM</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="0.5"
+                  value={distance}
+                  onChange={(e) => setDistance(e.target.value)}
+                  placeholder="0"
+                  autoFocus
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-3 text-slate-100 placeholder-slate-600 font-mono text-xl font-bold focus:border-sky-500 focus:ring-1 focus:ring-sky-500/50 outline-none transition-all"
+                />
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 font-mono">
+                  km
+                </span>
+              </div>
 
-            <button
-              type="button"
-              onClick={() => setIsReturnTrip(true)}
-              className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center ${
-                isReturnTrip
-                  ? 'bg-amber-500/15 border-amber-500/50 text-amber-300 shadow-sm'
-                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
-              }`}
-            >
-              <span className="block leading-tight">{t.returnTrip}</span>
-              <span className="text-[10px] text-slate-500 font-mono font-normal">2x Running Cost</span>
-            </button>
+              {/* Quick Distance Chips */}
+              <div className="flex items-center gap-1.5 mt-2 overflow-x-auto no-scrollbar py-0.5">
+                <span className="text-[10px] text-slate-500 font-mono shrink-0">KM:</span>
+                {quickDistances.map((km) => (
+                  <button
+                    key={km}
+                    type="button"
+                    onClick={() => setDistance(String(km))}
+                    className={`text-[11px] px-2 py-0.5 rounded-lg border font-mono transition-all shrink-0 ${
+                      distance === String(km)
+                        ? 'bg-sky-500/20 border-sky-500/50 text-sky-300 font-bold'
+                        : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                    }`}
+                  >
+                    {km}km
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Journey Type 2-Option Selector */}
+            <div>
+              <label className="text-xs font-bold text-slate-300 block mb-1.5 uppercase tracking-wider">
+                {t.tripType}
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsReturnTrip(false)}
+                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center ${
+                    !isReturnTrip
+                      ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-300 shadow-sm'
+                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  <span className="block leading-tight">{t.oneWayTrip}</span>
+                  <span className="text-[10px] text-slate-500 font-mono font-normal">1x Running Cost</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsReturnTrip(true)}
+                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center ${
+                    isReturnTrip
+                      ? 'bg-amber-500/15 border-amber-500/50 text-amber-300 shadow-sm'
+                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  <span className="block leading-tight">{t.returnTrip}</span>
+                  <span className="text-[10px] text-slate-500 font-mono font-normal">2x Running Cost</span>
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          /* Mode 2: Odometer Readings (Start & End) */
+          <div>
+            <div className="flex items-center justify-between mb-1.5 h-5">
+              <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <Gauge className="w-4 h-4 text-purple-400" />
+                {t.odometerModeTitle}
+              </span>
+              {odoDistance > 0 && (
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 font-mono font-bold animate-fade-in">
+                  {t.drivenBadge} {odoDistance.toFixed(1)} km
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="text-[11px] font-semibold text-slate-400 block mb-1">
+                  {t.startOdo}
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="1"
+                    value={startOdo}
+                    onChange={(e) => setStartOdo(e.target.value)}
+                    placeholder="e.g. 42100"
+                    autoFocus
+                    className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-600 font-mono text-base font-bold focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-500">
+                    km
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-slate-400 block mb-1">
+                  {t.endOdo}
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="1"
+                    value={endOdo}
+                    onChange={(e) => setEndOdo(e.target.value)}
+                    placeholder="e.g. 42118"
+                    className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-600 font-mono text-base font-bold focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-500">
+                    km
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {startOdo && endOdo && parseFloat(endOdo) < parseFloat(startOdo) && (
+              <p className="text-[11px] text-rose-400 mt-2 flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                {t.odoEndMustBeGreater}
+              </p>
+            )}
+
+            <p className="text-[10px] text-slate-500 mt-2">
+              Distance = End Odometer - Start Odometer (Calculates exact driven trip without doubling)
+            </p>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Real-time Calculation Results */}
@@ -169,7 +285,11 @@ export default function TripCostTab({ t, settings }) {
                 {formatLKR(isReturnTrip ? tripDetails.roundTripMeterFare : tripDetails.oneWayMeterFare)}
               </p>
               <p className="text-[11px] text-slate-400 font-medium">
-                {isReturnTrip ? 'Round-Trip Meter Fare (2x Distance)' : 'Standard One-Way Meter Fare (1x Distance)'}
+                {calcMode === 'odometer'
+                  ? `${t.odometerDrivenTitle}: ${tripDetails.effectiveDistance.toFixed(1)} km`
+                  : isReturnTrip
+                  ? 'Round-Trip Meter Fare (2x Distance)'
+                  : 'Standard One-Way Meter Fare (1x Distance)'}
               </p>
             </div>
 
@@ -178,7 +298,7 @@ export default function TripCostTab({ t, settings }) {
               <div className="flex justify-between items-center py-1 border-b border-slate-800/80">
                 <span className="text-slate-300 font-medium flex items-center gap-1">
                   <Route className="w-3.5 h-3.5 text-sky-400" />
-                  {t.oneWayFare} ({tripDetails.oneWayDistance.toFixed(1)} km)
+                  {calcMode === 'odometer' ? t.odometerDrivenTitle : t.oneWayFare} ({tripDetails.oneWayDistance.toFixed(1)} km)
                 </span>
                 <span className="font-mono font-bold text-slate-100">
                   {formatLKR(tripDetails.oneWayMeterFare)}
