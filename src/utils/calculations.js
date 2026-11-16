@@ -123,15 +123,17 @@ export function calcBulkProfit(appEarnings, cashPickups, odometerDistance, setti
  * @param {object} settings - Vehicle settings
  * @returns {object} Evaluation result with recommendation
  */
-export function evaluateHire(offeredFare, pickupDistance, tripDistance, commissionPercent, emptyReturn, settings) {
+export function evaluateHire(offeredFare, pickupDistance, tripDistance, commissionPercent, emptyReturn, settings, otherDeductions = 0) {
   const { petrolPrice, kmPerLiter, maintenancePerKm } = settings;
   const pDist = Math.max(0, parseFloat(pickupDistance) || 0);
   const tDist = Math.max(0, parseFloat(tripDistance) || 0);
   const oFare = Math.max(0, parseFloat(offeredFare) || 0);
   const comm = Math.max(0, parseFloat(commissionPercent) || 0);
+  const extraDed = Math.max(0, parseFloat(otherDeductions) || 0);
 
   const commissionAmount = oFare * (comm / 100);
-  const earningsAfterCommission = oFare - commissionAmount;
+  const totalDeductionsAmount = commissionAmount + extraDed;
+  const earningsAfterCommission = oFare - totalDeductionsAmount;
   
   // Total distance: pickup + trip + (optional return trip)
   let totalDistance = pDist + tDist;
@@ -148,7 +150,7 @@ export function evaluateHire(offeredFare, pickupDistance, tripDistance, commissi
   const profitPerKm = totalDistance > 0 ? netProfit / totalDistance : 0;
 
   // Minimum fare needed to break even + small margin
-  const minimumFare = comm < 100 ? totalCost / (1 - comm / 100) : totalCost;
+  const minimumFare = comm < 100 ? (totalCost + extraDed) / (1 - comm / 100) : (totalCost + extraDed);
 
   // Consider profitable if net profit is at least positive (ideally > LKR 50 or > LKR 25/km)
   const isProfitable = netProfit > 0 && (totalDistance === 0 || profitPerKm >= 5);
@@ -156,6 +158,8 @@ export function evaluateHire(offeredFare, pickupDistance, tripDistance, commissi
   return {
     offeredFare: oFare,
     commissionAmount,
+    otherDeductions: extraDed,
+    totalDeductionsAmount,
     earningsAfterCommission,
     pickupDistance: pDist,
     tripDistance: tDist,
