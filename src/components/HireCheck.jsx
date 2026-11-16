@@ -11,7 +11,7 @@ export default function HireCheckTab({ t, settings }) {
   const [pickupDist, setPickupDist] = useState('');
   const [tripDist, setTripDist] = useState('');
   const [commission, setCommission] = useState('15');
-  const [totalDeduction, setTotalDeduction] = useState('');
+  const [totalDeduction, setTotalDeduction] = useState('11');
   const [emptyReturn, setEmptyReturn] = useState(false);
 
   // Live real-time calculation whenever inputs change
@@ -31,7 +31,8 @@ export default function HireCheckTab({ t, settings }) {
     setFare('');
     setPickupDist('');
     setTripDist('');
-    setTotalDeduction('');
+    setCommission('15');
+    setTotalDeduction('11');
     setEmptyReturn(false);
   };
 
@@ -52,7 +53,7 @@ export default function HireCheckTab({ t, settings }) {
             <p className="text-[11px] text-slate-400">{t.hireCheckDesc}</p>
           </div>
         </div>
-        {(fare || tripDist || pickupDist || totalDeduction) && (
+        {(fare || tripDist || pickupDist || emptyReturn || totalDeduction !== '11' || commission !== '15') && (
           <button
             type="button"
             onClick={handleClear}
@@ -190,7 +191,7 @@ export default function HireCheckTab({ t, settings }) {
                 step="10"
                 value={totalDeduction}
                 onChange={(e) => setTotalDeduction(e.target.value)}
-                placeholder="0"
+                placeholder="11"
                 className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-slate-100 placeholder-slate-600 font-mono text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all font-semibold"
               />
               <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-slate-500">
