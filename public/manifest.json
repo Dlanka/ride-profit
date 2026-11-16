@@ -1,0 +1,18 @@
+{
+  "name": "RideProfit LK - Driver Earnings Optimizer",
+  "short_name": "RideProfit LK",
+  "description": "Smart daily earnings tracker and hire profit optimizer for Sri Lankan ride-hailing drivers (PickMe / Uber).",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090D16",
+  "theme_color": "#090D16",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
