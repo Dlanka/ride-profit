@@ -26,15 +26,18 @@ export default function TripCostTab({ t, settings }) {
   // Active distance for trip calculation
   const activeDistance = calcMode === 'direct' ? parseFloat(distance) || 0 : odoDistance;
 
+  // Round-trip doubling applies ONLY when in Direct KM mode AND isReturnTrip is true
+  const isRoundTripActive = calcMode === 'direct' && isReturnTrip;
+
   // Live real-time trip calculation
   const tripDetails = useMemo(() => {
     if (!activeDistance || activeDistance <= 0) return null;
     return calcTripCostDetails({
       distance: activeDistance,
-      isReturnTrip: calcMode === 'direct' ? isReturnTrip : false,
+      isReturnTrip: isRoundTripActive,
       settings,
     });
-  }, [activeDistance, calcMode, isReturnTrip, settings]);
+  }, [activeDistance, isRoundTripActive, settings]);
 
   const handleClear = () => {
     setDistance('');
@@ -89,7 +92,10 @@ export default function TripCostTab({ t, settings }) {
           </button>
           <button
             type="button"
-            onClick={() => setCalcMode('odometer')}
+            onClick={() => {
+              setCalcMode('odometer');
+              setIsReturnTrip(false);
+            }}
             className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               calcMode === 'odometer'
                 ? 'bg-purple-500/20 border border-purple-500/50 text-purple-300 shadow-sm'
@@ -282,12 +288,12 @@ export default function TripCostTab({ t, settings }) {
                 <span>{t.passengerQuoteFare}</span>
               </div>
               <p className="text-3xl sm:text-4xl font-extrabold text-amber-400 font-mono tracking-tight my-1">
-                {formatLKR(isReturnTrip ? tripDetails.roundTripMeterFare : tripDetails.oneWayMeterFare)}
+                {formatLKR(isRoundTripActive ? tripDetails.roundTripMeterFare : tripDetails.oneWayMeterFare)}
               </p>
               <p className="text-[11px] text-slate-400 font-medium">
                 {calcMode === 'odometer'
                   ? `${t.odometerDrivenTitle}: ${tripDetails.effectiveDistance.toFixed(1)} km`
-                  : isReturnTrip
+                  : isRoundTripActive
                   ? 'Round-Trip Meter Fare (2x Distance)'
                   : 'Standard One-Way Meter Fare (1x Distance)'}
               </p>
@@ -305,7 +311,7 @@ export default function TripCostTab({ t, settings }) {
                 </span>
               </div>
 
-              {isReturnTrip && (
+              {isRoundTripActive && (
                 <div className="flex justify-between items-center py-1 border-b border-slate-800/80">
                   <span className="text-amber-300 font-medium flex items-center gap-1">
                     <Route className="w-3.5 h-3.5 text-amber-400" />
@@ -332,7 +338,7 @@ export default function TripCostTab({ t, settings }) {
           {/* ======================================================== */}
           {/* 2nd (Middle): Profit Scenarios / Net Profit Breakdown     */}
           {/* ======================================================== */}
-          {!isReturnTrip ? (
+          {!isRoundTripActive ? (
             /* Single Net Profit Card for One-Way Trip */
             <div
               className={`rounded-2xl p-4 text-center shadow-xl border relative overflow-hidden transition-all ${
@@ -526,7 +532,7 @@ export default function TripCostTab({ t, settings }) {
                 {t.vehicleCostCardTitle}
               </h3>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-950 text-slate-400 font-mono border border-slate-800">
-                {tripDetails.effectiveDistance.toFixed(1)} km total
+                {tripDetails.effectiveDistance.toFixed(1)} km {calcMode === 'odometer' ? '(Odometer total)' : 'total'}
               </span>
             </div>
 
@@ -538,7 +544,11 @@ export default function TripCostTab({ t, settings }) {
                 </span>
                 <span className="font-mono font-bold text-sky-300">
                   {tripDetails.effectiveDistance.toFixed(1)} km
-                  {isReturnTrip && <span className="text-[10px] text-slate-500 font-normal ml-1">(2x trip)</span>}
+                  {calcMode === 'odometer' ? (
+                    <span className="text-[10px] text-purple-400 font-normal ml-1">({t.odometerTotalLabel})</span>
+                  ) : isRoundTripActive ? (
+                    <span className="text-[10px] text-slate-500 font-normal ml-1">(2x trip)</span>
+                  ) : null}
                 </span>
               </div>
 
