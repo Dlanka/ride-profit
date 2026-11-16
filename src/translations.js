@@ -151,12 +151,12 @@ const translations = {
     
     // Trip Cost Comparison (Round Trip)
     comparisonTitle: 'Round Trip Profit Scenarios (Side-by-Side)',
-    emptyReturnOption: '1-Way Fare (Empty Return)',
-    emptyReturnOptionSub: 'Customer pays 1x fare only',
+    emptyReturnOption: 'One-Way Fare (1x)',
+    emptyReturnOptionSub: 'Customer pays 1x fare (Driver returns empty)',
     roundTripOption: 'Round-Trip Fare (2x)',
-    roundTripOptionSub: 'Customer pays both ways',
-    fareCharged: 'Fare Charged',
-    netResult: 'Net Profit / Loss',
+    roundTripOptionSub: 'Customer pays 2x distance (Full round trip)',
+    fareCharged: 'Meter Fare',
+    netResult: 'Net Profit',
     lossBadge: 'LOSS ❌',
     profitBadge: 'PROFIT ✅',
     
@@ -339,11 +339,11 @@ const translations = {
     
     // Trip Cost Comparison (Round Trip)
     comparisonTitle: 'දෙපැත්තම ධාවනයේදී ලාභ සංසන්දනය',
-    emptyReturnOption: 'එක් අතකට ගාස්තුව (හිස් ආපසු)',
+    emptyReturnOption: 'එක් අතකට ගාස්තුව (1x)',
     emptyReturnOptionSub: 'මගියා 1x ගෙවයි (ආපසු හිස් අතින්)',
-    roundTripOption: 'යන්න සහ එන්න (2x ගාස්තුව)',
-    roundTripOptionSub: 'මගියා යන/එන දෙකටම ගෙවයි',
-    fareCharged: 'මගී ගාස්තුව',
+    roundTripOption: 'යන්න සහ එන්න (2x)',
+    roundTripOptionSub: 'මගියා 2x ගමනටම ගෙවයි',
+    fareCharged: 'මීටර් ගාස්තුව',
     netResult: 'ශුද්ධ ලාභය/පාඩුව',
     lossBadge: 'පාඩුයි ❌',
     profitBadge: 'ලාභයි ✅',

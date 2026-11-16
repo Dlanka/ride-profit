@@ -209,7 +209,7 @@ export default function TripCostTab({ t, settings }) {
                   }`}
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center justify-between mb-1 h-5">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300 truncate">
                         {t.emptyReturnOption}
                       </span>
@@ -223,7 +223,7 @@ export default function TripCostTab({ t, settings }) {
                         {tripDetails.emptyReturnNetProfit >= 0 ? t.profitBadge : t.lossBadge}
                       </span>
                     </div>
-                    <p className="text-[10px] text-slate-400 leading-tight mb-2.5 line-clamp-2">
+                    <p className="text-[10px] text-slate-400 leading-tight mb-2.5 h-7 line-clamp-2">
                       {t.emptyReturnOptionSub}
                     </p>
 
@@ -269,7 +269,7 @@ export default function TripCostTab({ t, settings }) {
                   }`}
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center justify-between mb-1 h-5">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 truncate">
                         {t.roundTripOption}
                       </span>
@@ -283,7 +283,7 @@ export default function TripCostTab({ t, settings }) {
                         {tripDetails.roundTripNetProfit >= 0 ? t.profitBadge : t.lossBadge}
                       </span>
                     </div>
-                    <p className="text-[10px] text-slate-400 leading-tight mb-2.5 line-clamp-2">
+                    <p className="text-[10px] text-slate-400 leading-tight mb-2.5 h-7 line-clamp-2">
                       {t.roundTripOptionSub}
                     </p>
 
