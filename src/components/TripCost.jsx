@@ -138,7 +138,80 @@ export default function TripCostTab({ t, settings }) {
       {/* Real-time Calculation Results */}
       {tripDetails ? (
         <div className="space-y-3.5 animate-slide-up">
-          {/* Card 1: Estimated Net Profit Card (or Side-by-Side Comparison if Return Trip) */}
+          {/* ======================================================== */}
+          {/* 1st (Top): Standard Meter Taxi Fare (Hero Quote Card)    */}
+          {/* ======================================================== */}
+          <div className="bg-gradient-to-br from-amber-500/15 via-slate-900 to-slate-950 border-2 border-amber-500/50 rounded-2xl p-4 shadow-xl shadow-amber-500/10 space-y-3 relative overflow-hidden">
+            <div className="flex items-center justify-between border-b border-amber-500/20 pb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-400/40 flex items-center justify-center">
+                  <Gauge className="w-4 h-4 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-white uppercase tracking-wider leading-tight">
+                    {t.meterFareCardTitle}
+                  </h3>
+                  <p className="text-[10px] text-amber-300/80 font-medium">{t.passengerQuoteSub || t.meterFareSub}</p>
+                </div>
+              </div>
+              <span className="text-[10px] px-2.5 py-1 rounded-full bg-slate-950 text-amber-300 font-mono font-semibold border border-amber-500/30">
+                {settings.vehicleType === 'threeWheeler' ? 'Three-Wheeler' : 'Motorbike'}
+              </span>
+            </div>
+
+            {/* Hero Quote Highlighted Box */}
+            <div className="bg-slate-950/90 border border-amber-500/40 rounded-xl p-3.5 text-center shadow-inner">
+              <div className="flex items-center justify-center gap-1.5 text-xs text-amber-300 font-bold uppercase tracking-wider mb-1">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>{t.passengerQuoteFare}</span>
+              </div>
+              <p className="text-3xl sm:text-4xl font-extrabold text-amber-400 font-mono tracking-tight my-1">
+                {formatLKR(isReturnTrip ? tripDetails.roundTripMeterFare : tripDetails.oneWayMeterFare)}
+              </p>
+              <p className="text-[11px] text-slate-400 font-medium">
+                {isReturnTrip ? 'Round-Trip Meter Fare (2x Distance)' : 'Standard One-Way Meter Fare (1x Distance)'}
+              </p>
+            </div>
+
+            {/* Clean structured breakdown & Rate Schedule below hero figure */}
+            <div className="space-y-2 pt-1 text-xs">
+              <div className="flex justify-between items-center py-1 border-b border-slate-800/80">
+                <span className="text-slate-300 font-medium flex items-center gap-1">
+                  <Route className="w-3.5 h-3.5 text-sky-400" />
+                  {t.oneWayFare} ({tripDetails.oneWayDistance.toFixed(1)} km)
+                </span>
+                <span className="font-mono font-bold text-slate-100">
+                  {formatLKR(tripDetails.oneWayMeterFare)}
+                </span>
+              </div>
+
+              {isReturnTrip && (
+                <div className="flex justify-between items-center py-1 border-b border-slate-800/80">
+                  <span className="text-amber-300 font-medium flex items-center gap-1">
+                    <Route className="w-3.5 h-3.5 text-amber-400" />
+                    {t.roundTripFare} ({tripDetails.effectiveDistance.toFixed(1)} km)
+                  </span>
+                  <span className="font-mono font-bold text-amber-400">
+                    {formatLKR(tripDetails.roundTripMeterFare)}
+                  </span>
+                </div>
+              )}
+
+              {/* Rate Schedule */}
+              <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl px-3 py-2 text-[11px] text-slate-400 font-mono flex items-center justify-between">
+                <span className="text-slate-500 font-semibold">Rate Schedule:</span>
+                <div className="flex items-center gap-2">
+                  <span>1st KM: <strong className="text-slate-200">LKR {settings.firstKmFare ?? 100}</strong></span>
+                  <span className="text-slate-600">•</span>
+                  <span>After: <strong className="text-slate-200">LKR {settings.secondKmRate ?? 85}/km</strong></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ======================================================== */}
+          {/* 2nd (Middle): Profit Scenarios / Net Profit Breakdown     */}
+          {/* ======================================================== */}
           {!isReturnTrip ? (
             /* Single Net Profit Card for One-Way Trip */
             <div
@@ -323,7 +396,9 @@ export default function TripCostTab({ t, settings }) {
             </div>
           )}
 
-          {/* Card 2: Actual Vehicle Running Cost Breakdown */}
+          {/* ======================================================== */}
+          {/* 3rd (Bottom): Actual Vehicle Running Cost Breakdown       */}
+          {/* ======================================================== */}
           <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-lg shadow-black/20">
             <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
               <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
@@ -381,57 +456,6 @@ export default function TripCostTab({ t, settings }) {
                 <span className="text-rose-400 font-bold">{t.breakEvenCost}</span>
                 <span className="font-mono font-black text-rose-400 text-sm">
                   {formatLKR(tripDetails.totalRunningCost)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 3: Standard Meter Taxi Fare Calculation */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-lg shadow-black/20">
-            <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
-              <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Gauge className="w-4 h-4 text-amber-400" />
-                {t.meterFareCardTitle}
-              </h3>
-              <span className="text-[10px] text-slate-500 font-mono">
-                {settings.vehicleType === 'threeWheeler' ? 'Three-Wheeler' : 'Motorbike'}
-              </span>
-            </div>
-
-            {/* Formula Preview Box */}
-            <div className="bg-slate-950 border border-slate-800/90 rounded-xl p-2.5 text-[11px] mb-3 text-slate-400 font-mono">
-              <span className="text-slate-500 block text-[10px] mb-0.5">Rate Schedule:</span>
-              <span>1st KM: <strong>LKR {settings.firstKmFare ?? 100}</strong></span>
-              <span className="mx-1.5 text-slate-600">•</span>
-              <span>After: <strong>LKR {settings.secondKmRate ?? 85}/km</strong></span>
-            </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between items-center py-1 border-b border-slate-800/80">
-                <span className="text-slate-400">{t.oneWayFare} ({tripDetails.oneWayDistance.toFixed(1)} km)</span>
-                <span className="font-mono font-bold text-slate-200">
-                  {formatLKR(tripDetails.oneWayMeterFare)}
-                </span>
-              </div>
-
-              {isReturnTrip && (
-                <div className="flex justify-between items-center py-1 border-b border-slate-800/80">
-                  <span className="text-slate-400">{t.roundTripFare} ({tripDetails.effectiveDistance.toFixed(1)} km)</span>
-                  <span className="font-mono font-bold text-amber-400">
-                    {formatLKR(tripDetails.roundTripMeterFare)}
-                  </span>
-                </div>
-              )}
-
-              <div className="flex justify-between items-center pt-2">
-                <div>
-                  <span className="text-amber-400 font-bold block">{t.meterFareSub}</span>
-                  <span className="text-[10px] text-slate-500">
-                    {isReturnTrip ? '1x vs 2x fare shown above' : 'Standard 1x passenger fare'}
-                  </span>
-                </div>
-                <span className="font-mono font-black text-amber-400 text-lg">
-                  {formatLKR(isReturnTrip ? tripDetails.roundTripMeterFare : tripDetails.oneWayMeterFare)}
                 </span>
               </div>
             </div>
