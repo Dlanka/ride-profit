@@ -170,16 +170,18 @@ const translations = {
     profitBadge: 'PROFIT ✅',
     
     // Monthly & History Section
-    historyTitle: 'Past Days History',
-    historySubtitle: 'Review past earnings and monthly totals',
+    historyTitle: 'Past 7 Days History',
+    historySubtitle: 'Review last 7 days earnings and records',
     monthlySummaryTitle: "This Month's Total Profit",
     monthlyEarnings: 'Monthly Gross',
     monthlyDistance: 'Monthly Distance',
     monthlyTrips: 'Monthly Trips',
     noHistory: 'No past day records yet. Keep driving and logging daily!',
     viewDate: 'View',
-    records: 'Days Tracked',
+    records: 'Past 7 Days Records',
     date: 'Date',
+    deleteDayConfirm: 'Are you sure you want to delete all records for',
+    dayDeleted: 'Day record deleted successfully!',
 
     // Common
     lkr: 'LKR',
@@ -367,16 +369,18 @@ const translations = {
     profitBadge: 'ලාභයි ✅',
     
     // Monthly & History Section
-    historyTitle: 'පසුගිය දින වාර්තා',
-    historySubtitle: 'පසුගිය ඉපැයීම් සහ මාසික ලාභ සාරාංශය',
+    historyTitle: 'පසුගිය දින 7 වාර්තා',
+    historySubtitle: 'පසුගිය දින 7 ආදායම් සහ ලාභ සාරාංශය',
     monthlySummaryTitle: 'මෙම මාසයේ මුළු ශුද්ධ ලාභය',
     monthlyEarnings: 'මාසික දළ ආදායම',
     monthlyDistance: 'මාසයේ ධාවන දුර',
     monthlyTrips: 'මාසයේ ගමන් වාර',
     noHistory: 'තවම පසුගිය දින වාර්තා නොමැත. දිගටම ධාවනය කර සටහන් තබාගන්න!',
     viewDate: 'බලන්න',
-    records: 'සටහන් කළ දින',
+    records: 'පසුගිය දින 7 වාර්තා (Records)',
     date: 'දිනය',
+    deleteDayConfirm: 'මෙම දිනයේ සියලුම වාර්තා මැකීමට අවශ්‍ය බව සහතිකද?',
+    dayDeleted: 'දිනයේ වාර්තාව සාර්ථකව මකන ලදී!',
 
     // Common
     lkr: 'LKR',

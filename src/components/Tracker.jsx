@@ -8,7 +8,7 @@ import {
 import {
   calcHireProfit, calcBulkProfit, aggregateHires, formatLKR,
   getTodayKey, registerDateInIndex, getTrackedDates, getMonthlySummary,
-  HIRES_KEY_PREFIX, BULK_KEY_PREFIX
+  deleteDateFromHistory, HIRES_KEY_PREFIX, BULK_KEY_PREFIX
 } from '../utils/calculations';
 
 function loadHiresForDate(dateKey) {
@@ -53,6 +53,7 @@ export default function TrackerTab({ t, settings }) {
   // History & Collapsible section state
   const [showHistory, setShowHistory] = useState(false);
   const [toast, setToast] = useState('');
+  const [historyVersion, setHistoryVersion] = useState(0);
 
   // Load hires when activeDate changes
   useEffect(() => {
@@ -68,7 +69,7 @@ export default function TrackerTab({ t, settings }) {
     } catch (e) {
       setBulkResult(null);
     }
-  }, [activeDate]);
+  }, [activeDate, historyVersion]);
 
   // Save hires whenever they change
   useEffect(() => {
@@ -89,9 +90,27 @@ export default function TrackerTab({ t, settings }) {
   const targetRemaining = dailyTarget > 0 ? Math.max(0, dailyTarget - summary.totalNetProfit) : 0;
   const targetExceeded = dailyTarget > 0 && summary.totalNetProfit > dailyTarget ? summary.totalNetProfit - dailyTarget : 0;
 
-  // Monthly summary
-  const monthlySummary = useMemo(() => getMonthlySummary(), [hires, bulkResult]);
-  const trackedDates = useMemo(() => getTrackedDates(), [hires, activeDate]);
+  // Monthly summary & Last 7 Days records
+  const monthlySummary = useMemo(() => getMonthlySummary(), [hires, bulkResult, historyVersion]);
+  const trackedDates = useMemo(() => getTrackedDates(), [hires, activeDate, historyVersion]);
+  const past7Days = useMemo(() => trackedDates.slice(0, 7), [trackedDates]);
+
+  // Delete an entire day's records
+  const handleDeleteDay = (dateStr) => {
+    const isToday = dateStr === getTodayKey();
+    const promptMsg = `${t.deleteDayConfirm || 'Are you sure you want to delete records for'} ${isToday ? `${t.today} (${dateStr})` : dateStr}?`;
+    if (window.confirm(promptMsg)) {
+      deleteDateFromHistory(dateStr);
+      if (activeDate === dateStr) {
+        const today = getTodayKey();
+        setActiveDate(today);
+        setHires(loadHiresForDate(today));
+        setBulkResult(null);
+      }
+      setHistoryVersion((v) => v + 1);
+      showToast(t.dayDeleted || 'Day records deleted');
+    }
+  };
 
   // Calculate live odometer distance if in odometer mode
   const calculatedOdoDistance = useMemo(() => {
@@ -735,15 +754,20 @@ export default function TrackerTab({ t, settings }) {
               </div>
             </div>
 
-            {/* List of Tracked Dates */}
+            {/* List of Tracked Dates (Limited to Last 7 Days) */}
             <div className="space-y-1.5">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                {t.records}
-              </span>
-              {trackedDates.length === 0 ? (
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  {t.records}
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">
+                  {past7Days.length} / 7 days
+                </span>
+              </div>
+              {past7Days.length === 0 ? (
                 <p className="text-xs text-slate-500 text-center py-2">{t.noHistory}</p>
               ) : (
-                trackedDates.map((dateStr) => {
+                past7Days.map((dateStr) => {
                   const dayHires = loadHiresForDate(dateStr);
                   const daySummary = aggregateHires(dayHires);
                   const isCurrent = dateStr === activeDate;
@@ -758,26 +782,38 @@ export default function TrackerTab({ t, settings }) {
                           : 'bg-slate-950/60 border-slate-800/80 text-slate-300 hover:border-slate-700'
                       }`}
                     >
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                        <div>
-                          <span className="text-xs font-mono font-semibold block leading-tight">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                        <div className="truncate">
+                          <span className="text-xs font-mono font-semibold block leading-tight truncate">
                             {dateStr === getTodayKey() ? `${t.today} (${dateStr})` : dateStr}
                           </span>
-                          <span className="text-[10px] text-slate-500">
+                          <span className="text-[10px] text-slate-500 truncate block">
                             {dayHires.length} {t.trips} • {daySummary.totalEffectiveDistance.toFixed(1)} km
                           </span>
                         </div>
                       </div>
 
-                      <div className="text-right flex items-center gap-1.5">
+                      <div className="text-right flex items-center gap-2 shrink-0">
                         <div>
                           <span className={`text-xs font-bold font-mono block ${daySummary.totalNetProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                             {formatLKR(daySummary.totalNetProfit)}
                           </span>
                           <span className="text-[9px] text-slate-500">Net Profit</span>
                         </div>
-                        <ArrowUpRight className={`w-3.5 h-3.5 ${isCurrent ? 'text-emerald-400' : 'text-slate-600'}`} />
+
+                        {/* Delete Day Action */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteDay(dateStr);
+                          }}
+                          title={t.deleteHire || 'Delete'}
+                          className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg active:scale-95 transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   );

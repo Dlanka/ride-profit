@@ -265,11 +265,11 @@ export function getTrackedDates() {
     if (!dates.includes(today)) {
       dates.unshift(today);
     }
-    // Also scan any localStorage keys that start with HIRES_KEY_PREFIX
+    // Also scan any localStorage keys that start with HIRES_KEY_PREFIX or BULK_KEY_PREFIX
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith(HIRES_KEY_PREFIX)) {
-        const d = key.replace(HIRES_KEY_PREFIX, '');
+      if (key && (key.startsWith(HIRES_KEY_PREFIX) || key.startsWith(BULK_KEY_PREFIX))) {
+        const d = key.replace(HIRES_KEY_PREFIX, '').replace(BULK_KEY_PREFIX, '');
         if (d && !dates.includes(d)) {
           dates.push(d);
         }
@@ -278,6 +278,25 @@ export function getTrackedDates() {
     return Array.from(new Set(dates)).sort().reverse();
   } catch (e) {
     return [getTodayKey()];
+  }
+}
+
+/**
+ * Delete a specific date's entire records (hires, bulk, and index entry)
+ * @param {string} dateKey - 'YYYY-MM-DD'
+ */
+export function deleteDateFromHistory(dateKey) {
+  try {
+    localStorage.removeItem(HIRES_KEY_PREFIX + dateKey);
+    localStorage.removeItem(BULK_KEY_PREFIX + dateKey);
+    const raw = localStorage.getItem(DATES_INDEX_KEY);
+    if (raw) {
+      const dates = JSON.parse(raw);
+      const filtered = dates.filter((d) => d !== dateKey);
+      localStorage.setItem(DATES_INDEX_KEY, JSON.stringify(filtered));
+    }
+  } catch (e) {
+    console.error('Failed to delete date from history:', e);
   }
 }
 
