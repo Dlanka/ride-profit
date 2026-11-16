@@ -1,15 +1,14 @@
 import { useState, useMemo } from 'react';
 import {
   Navigation, Route, Fuel, Wrench, Gauge, Banknote,
-  CheckCircle2, AlertTriangle, RotateCcw, ToggleLeft,
-  ToggleRight, Sparkles, Car, ArrowRight
+  CheckCircle2, AlertTriangle, RotateCcw,
+  Sparkles, Car, ArrowRight
 } from 'lucide-react';
 import { calcTripCostDetails, formatLKR } from '../utils/calculations';
 
 export default function TripCostTab({ t, settings }) {
   const [distance, setDistance] = useState('');
   const [isReturnTrip, setIsReturnTrip] = useState(false);
-  const [chargeMeterReturn, setChargeMeterReturn] = useState(false);
 
   // Live real-time trip calculation
   const tripDetails = useMemo(() => {
@@ -18,15 +17,13 @@ export default function TripCostTab({ t, settings }) {
     return calcTripCostDetails({
       distance: d,
       isReturnTrip,
-      chargeMeterReturn,
       settings,
     });
-  }, [distance, isReturnTrip, chargeMeterReturn, settings]);
+  }, [distance, isReturnTrip, settings]);
 
   const handleClear = () => {
     setDistance('');
     setIsReturnTrip(false);
-    setChargeMeterReturn(false);
   };
 
   const quickDistances = [2, 3, 5, 8, 12, 15, 20, 30];
@@ -136,86 +133,195 @@ export default function TripCostTab({ t, settings }) {
             </button>
           </div>
         </div>
-
-        {/* Optional Round Trip Passenger Fare Toggle */}
-        {isReturnTrip && (
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => setChargeMeterReturn(!chargeMeterReturn)}
-            onKeyDown={(e) => e.key === 'Enter' && setChargeMeterReturn(!chargeMeterReturn)}
-            className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer select-none transition-all ${
-              chargeMeterReturn
-                ? 'bg-purple-500/15 border-purple-500/40 text-purple-300'
-                : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
-            }`}
-          >
-            <div>
-              <p className="text-xs font-bold leading-tight">
-                {t.chargeReturnMeter}
-              </p>
-              <p className="text-[10px] text-slate-500 mt-0.5">
-                {chargeMeterReturn
-                  ? 'Customer pays 2x meter fare (waiting / round trip hire)'
-                  : 'Customer pays one-way fare only (driver returns empty)'}
-              </p>
-            </div>
-            {chargeMeterReturn ? (
-              <ToggleRight className="w-7 h-7 text-purple-400 shrink-0" />
-            ) : (
-              <ToggleLeft className="w-7 h-7 text-slate-600 shrink-0" />
-            )}
-          </div>
-        )}
       </div>
 
       {/* Real-time Calculation Results */}
       {tripDetails ? (
         <div className="space-y-3.5 animate-slide-up">
-          {/* Card 1: Estimated Net Profit Card */}
-          <div
-            className={`rounded-2xl p-4 text-center shadow-xl border relative overflow-hidden transition-all ${
-              tripDetails.netProfit >= 0
-                ? 'bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 border-emerald-500/50 text-white'
-                : 'bg-gradient-to-br from-rose-950 via-rose-900 to-slate-950 border-rose-500/50 text-white'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2 mb-1.5">
-              {tripDetails.netProfit >= 0 ? (
-                <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                </div>
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-rose-500/20 border border-rose-400/40 flex items-center justify-center">
-                  <AlertTriangle className="w-5 h-5 text-rose-400" />
-                </div>
-              )}
-              <span className={`text-sm font-extrabold uppercase tracking-wide ${tripDetails.netProfit >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-                {t.netProfitCardTitle}
-              </span>
-            </div>
+          {/* Card 1: Estimated Net Profit Card (or Side-by-Side Comparison if Return Trip) */}
+          {!isReturnTrip ? (
+            /* Single Net Profit Card for One-Way Trip */
+            <div
+              className={`rounded-2xl p-4 text-center shadow-xl border relative overflow-hidden transition-all ${
+                tripDetails.oneWayNetProfit >= 0
+                  ? 'bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 border-emerald-500/50 text-white'
+                  : 'bg-gradient-to-br from-rose-950 via-rose-900 to-slate-950 border-rose-500/50 text-white'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2 mb-1.5">
+                {tripDetails.oneWayNetProfit >= 0 ? (
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-rose-500/20 border border-rose-400/40 flex items-center justify-center">
+                    <AlertTriangle className="w-5 h-5 text-rose-400" />
+                  </div>
+                )}
+                <span className={`text-sm font-extrabold uppercase tracking-wide ${tripDetails.oneWayNetProfit >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                  {t.netProfitCardTitle}
+                </span>
+              </div>
 
-            <p className="text-[11px] text-slate-300 mb-2">
-              {tripDetails.netProfit >= 0 ? t.profitableMeterMsg : t.lossMeterMsg}
-            </p>
-
-            <div className="my-2 py-2.5 bg-slate-950/70 rounded-xl border border-white/10">
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-medium">
-                {t.netProfit}
-              </span>
-              <p className={`text-3xl font-black font-mono tracking-tight ${tripDetails.netProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {formatLKR(tripDetails.netProfit)}
+              <p className="text-[11px] text-slate-300 mb-2">
+                {tripDetails.oneWayNetProfit >= 0 ? t.profitableMeterMsg : t.lossMeterMsg}
               </p>
-              {tripDetails.chargedMeterFare > 0 && (
-                <div className="flex items-center justify-center gap-1.5 text-xs mt-1 font-mono">
-                  <span className="text-slate-400">{t.profitMargin}:</span>
-                  <span className={`font-bold ${tripDetails.netProfit >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-                    {Math.round(tripDetails.profitMarginPercent)}%
+
+              <div className="my-2 py-2.5 bg-slate-950/70 rounded-xl border border-white/10">
+                <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-medium">
+                  {t.netProfit}
+                </span>
+                <p className={`text-3xl font-black font-mono tracking-tight ${tripDetails.oneWayNetProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {formatLKR(tripDetails.oneWayNetProfit)}
+                </p>
+                {tripDetails.oneWayMeterFare > 0 && (
+                  <div className="flex items-center justify-center gap-1.5 text-xs mt-1 font-mono">
+                    <span className="text-slate-400">{t.profitMargin}:</span>
+                    <span className={`font-bold ${tripDetails.oneWayNetProfit >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                      {Math.round(tripDetails.oneWayProfitMargin)}%
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* Side-by-Side Comparison Card for Round Trip */
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 shadow-xl space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span className="text-xs font-bold text-white uppercase tracking-wider">
+                    {t.comparisonTitle}
                   </span>
                 </div>
-              )}
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-950 text-slate-400 font-mono border border-slate-800">
+                  2x Cost ({tripDetails.effectiveDistance.toFixed(1)} km)
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                {/* Column 1: One-Way Fare (Customer pays 1x / Empty Return) */}
+                <div
+                  className={`rounded-xl p-3 border flex flex-col justify-between transition-all ${
+                    tripDetails.emptyReturnNetProfit >= 0
+                      ? 'bg-slate-950/80 border-emerald-500/40'
+                      : 'bg-rose-950/30 border-rose-500/40'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300 truncate">
+                        {t.emptyReturnOption}
+                      </span>
+                      <span
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded font-mono shrink-0 ml-1 ${
+                          tripDetails.emptyReturnNetProfit >= 0
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        {tripDetails.emptyReturnNetProfit >= 0 ? t.profitBadge : t.lossBadge}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 leading-tight mb-2.5 line-clamp-2">
+                      {t.emptyReturnOptionSub}
+                    </p>
+
+                    <div className="space-y-1.5 text-xs font-mono">
+                      <div className="flex justify-between items-center py-0.5 border-b border-slate-800/60">
+                        <span className="text-[11px] text-slate-400 font-sans">{t.fareCharged}</span>
+                        <span className="font-bold text-slate-200">{formatLKR(tripDetails.oneWayMeterFare)}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-0.5 border-b border-slate-800/60">
+                        <span className="text-[11px] text-slate-400 font-sans">{t.totalCost}</span>
+                        <span className="font-semibold text-rose-400">-{formatLKR(tripDetails.totalRunningCost)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-slate-800/80 bg-slate-950/60 rounded-lg p-2 text-center">
+                    <span className="text-[9px] text-slate-400 uppercase tracking-wider block font-sans">
+                      {t.netResult}
+                    </span>
+                    <p
+                      className={`text-base font-black font-mono tracking-tight ${
+                        tripDetails.emptyReturnNetProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                      }`}
+                    >
+                      {formatLKR(tripDetails.emptyReturnNetProfit)}
+                    </p>
+                    <span
+                      className={`text-[10px] font-mono font-bold block ${
+                        tripDetails.emptyReturnNetProfit >= 0 ? 'text-emerald-300/80' : 'text-rose-300/80'
+                      }`}
+                    >
+                      {Math.round(tripDetails.emptyReturnMargin)}% margin
+                    </span>
+                  </div>
+                </div>
+
+                {/* Column 2: Round-Trip Fare (Customer pays 2x) */}
+                <div
+                  className={`rounded-xl p-3 border flex flex-col justify-between transition-all ${
+                    tripDetails.roundTripNetProfit >= 0
+                      ? 'bg-emerald-950/30 border-emerald-500/50'
+                      : 'bg-rose-950/30 border-rose-500/40'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 truncate">
+                        {t.roundTripOption}
+                      </span>
+                      <span
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded font-mono shrink-0 ml-1 ${
+                          tripDetails.roundTripNetProfit >= 0
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        {tripDetails.roundTripNetProfit >= 0 ? t.profitBadge : t.lossBadge}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 leading-tight mb-2.5 line-clamp-2">
+                      {t.roundTripOptionSub}
+                    </p>
+
+                    <div className="space-y-1.5 text-xs font-mono">
+                      <div className="flex justify-between items-center py-0.5 border-b border-slate-800/60">
+                        <span className="text-[11px] text-slate-400 font-sans">{t.fareCharged}</span>
+                        <span className="font-bold text-amber-400">{formatLKR(tripDetails.roundTripMeterFare)}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-0.5 border-b border-slate-800/60">
+                        <span className="text-[11px] text-slate-400 font-sans">{t.totalCost}</span>
+                        <span className="font-semibold text-rose-400">-{formatLKR(tripDetails.totalRunningCost)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-emerald-500/20 bg-slate-950/60 rounded-lg p-2 text-center">
+                    <span className="text-[9px] text-slate-400 uppercase tracking-wider block font-sans">
+                      {t.netResult}
+                    </span>
+                    <p
+                      className={`text-base font-black font-mono tracking-tight ${
+                        tripDetails.roundTripNetProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                      }`}
+                    >
+                      {formatLKR(tripDetails.roundTripNetProfit)}
+                    </p>
+                    <span
+                      className={`text-[10px] font-mono font-bold block ${
+                        tripDetails.roundTripNetProfit >= 0 ? 'text-emerald-300' : 'text-rose-300'
+                      }`}
+                    >
+                      {Math.round(tripDetails.roundTripMargin)}% margin
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Card 2: Actual Vehicle Running Cost Breakdown */}
           <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-lg shadow-black/20">
@@ -310,9 +416,9 @@ export default function TripCostTab({ t, settings }) {
 
               {isReturnTrip && (
                 <div className="flex justify-between items-center py-1 border-b border-slate-800/80">
-                  <span className="text-slate-400">{t.roundTripFare}</span>
-                  <span className={`font-mono font-bold ${chargeMeterReturn ? 'text-amber-400' : 'text-slate-500 line-through'}`}>
-                    {formatLKR(tripDetails.oneWayMeterFare * 2)}
+                  <span className="text-slate-400">{t.roundTripFare} ({tripDetails.effectiveDistance.toFixed(1)} km)</span>
+                  <span className="font-mono font-bold text-amber-400">
+                    {formatLKR(tripDetails.roundTripMeterFare)}
                   </span>
                 </div>
               )}
@@ -321,11 +427,11 @@ export default function TripCostTab({ t, settings }) {
                 <div>
                   <span className="text-amber-400 font-bold block">{t.meterFareSub}</span>
                   <span className="text-[10px] text-slate-500">
-                    {isReturnTrip && chargeMeterReturn ? 'Charged for 2x journey' : 'Charged for 1x journey'}
+                    {isReturnTrip ? '1x vs 2x fare shown above' : 'Standard 1x passenger fare'}
                   </span>
                 </div>
                 <span className="font-mono font-black text-amber-400 text-lg">
-                  {formatLKR(tripDetails.chargedMeterFare)}
+                  {formatLKR(isReturnTrip ? tripDetails.roundTripMeterFare : tripDetails.oneWayMeterFare)}
                 </span>
               </div>
             </div>

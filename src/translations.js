@@ -132,7 +132,6 @@ const translations = {
     tripType: 'Trip Type',
     oneWayTrip: 'One-Way Trip (1x Distance)',
     returnTrip: 'Round Trip (2x Distance)',
-    chargeReturnMeter: 'Charge meter fare for return journey too (2x Fare)',
     vehicleCostCardTitle: 'Actual Vehicle Running Cost',
     totalEffectiveDist: 'Effective Total Distance',
     fuelNeeded: 'Fuel Required',
@@ -149,6 +148,17 @@ const translations = {
     lossMeterMsg: 'Operating costs exceed meter fare (empty return distance is too high).',
     tripCostPlaceholderTitle: 'Instant Trip Costing',
     tripCostPlaceholder: 'Enter planned trip distance (km) above to see vehicle running costs, fuel liters, and standard meter taxi earnings.',
+    
+    // Trip Cost Comparison (Round Trip)
+    comparisonTitle: 'Round Trip Profit Scenarios (Side-by-Side)',
+    emptyReturnOption: '1-Way Fare (Empty Return)',
+    emptyReturnOptionSub: 'Customer pays 1x fare only',
+    roundTripOption: 'Round-Trip Fare (2x)',
+    roundTripOptionSub: 'Customer pays both ways',
+    fareCharged: 'Fare Charged',
+    netResult: 'Net Profit / Loss',
+    lossBadge: 'LOSS ❌',
+    profitBadge: 'PROFIT ✅',
     
     // Monthly & History Section
     historyTitle: 'Past Days History',
@@ -310,7 +320,6 @@ const translations = {
     tripType: 'ගමන් ස්වභාවය',
     oneWayTrip: 'එක් අතකට පමණයි (1x දුර)',
     returnTrip: 'යන්න සහ එන්න (2x දුර)',
-    chargeReturnMeter: 'ආපසු ගමන සඳහාත් මීටර් ගාස්තුව අය කෙරේ (2x Fare)',
     vehicleCostCardTitle: 'සැබෑ වාහන ධාවන වියදම',
     totalEffectiveDist: 'මුළු ධාවනය වන දුර',
     fuelNeeded: 'අවශ්‍ය ඉන්ධන ප්‍රමාණය',
@@ -327,6 +336,17 @@ const translations = {
     lossMeterMsg: 'හිස් ආපසු ඒම නිසා වියදම මීටර් ගාස්තුවට වඩා වැඩියි (පාඩුයි).',
     tripCostPlaceholderTitle: 'ගමන් වියදම ක්ෂණිකව බලන්න',
     tripCostPlaceholder: 'සැබෑ තෙල් වියදම, අවශ්‍ය ලීටර් ප්‍රමාණය සහ මීටර් ලාභය බැලීමට ඉහතින් ගමන් දුර (km) ඇතුළත් කරන්න.',
+    
+    // Trip Cost Comparison (Round Trip)
+    comparisonTitle: 'දෙපැත්තම ධාවනයේදී ලාභ සංසන්දනය',
+    emptyReturnOption: 'එක් අතකට ගාස්තුව (හිස් ආපසු)',
+    emptyReturnOptionSub: 'මගියා 1x ගෙවයි (ආපසු හිස් අතින්)',
+    roundTripOption: 'යන්න සහ එන්න (2x ගාස්තුව)',
+    roundTripOptionSub: 'මගියා යන/එන දෙකටම ගෙවයි',
+    fareCharged: 'මගී ගාස්තුව',
+    netResult: 'ශුද්ධ ලාභය/පාඩුව',
+    lossBadge: 'පාඩුයි ❌',
+    profitBadge: 'ලාභයි ✅',
     
     // Monthly & History Section
     historyTitle: 'පසුගිය දින වාර්තා',

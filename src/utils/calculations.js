@@ -358,11 +358,10 @@ export function calcMeterFare(distance, firstKmFare = 100, secondKmRate = 85) {
  * @param {object} params
  * @param {number} params.distance - One-way trip distance (km)
  * @param {boolean} params.isReturnTrip - Whether vehicle travels return journey (2x distance)
- * @param {boolean} [params.chargeMeterReturn] - Whether meter fare is charged both ways
  * @param {object} params.settings - Vehicle & meter settings
  * @returns {object} Breakdown of trip costs and meter earnings
  */
-export function calcTripCostDetails({ distance, isReturnTrip, chargeMeterReturn = false, settings }) {
+export function calcTripCostDetails({ distance, isReturnTrip, settings }) {
   const d = Math.max(0, parseFloat(distance) || 0);
   const {
     petrolPrice = 320,
@@ -381,27 +380,36 @@ export function calcTripCostDetails({ distance, isReturnTrip, chargeMeterReturn 
 
   // Single-way standard meter fare
   const oneWayMeterFare = calcMeterFare(d, firstKmFare, secondKmRate);
+  const roundTripMeterFare = oneWayMeterFare * 2;
 
-  // Meter fare charged to passenger
-  const chargedMeterFare = isReturnTrip && chargeMeterReturn ? oneWayMeterFare * 2 : oneWayMeterFare;
+  // One-way scenario (1x distance & 1x running cost)
+  const oneWayNetProfit = oneWayMeterFare - totalRunningCost;
+  const oneWayProfitMargin = oneWayMeterFare > 0 ? (oneWayNetProfit / oneWayMeterFare) * 100 : 0;
 
-  // Net profit at meter rate after subtracting total vehicle running cost
-  const netProfit = chargedMeterFare - totalRunningCost;
-  const profitMarginPercent = chargedMeterFare > 0 ? (netProfit / chargedMeterFare) * 100 : 0;
+  // Round-trip Scenario 1: Customer pays 1x fare, driver returns empty (2x running cost)
+  const emptyReturnNetProfit = oneWayMeterFare - totalRunningCost;
+  const emptyReturnMargin = oneWayMeterFare > 0 ? (emptyReturnNetProfit / oneWayMeterFare) * 100 : 0;
+
+  // Round-trip Scenario 2: Customer pays 2x fare (2x running cost)
+  const roundTripNetProfit = roundTripMeterFare - totalRunningCost;
+  const roundTripMargin = roundTripMeterFare > 0 ? (roundTripNetProfit / roundTripMeterFare) * 100 : 0;
 
   return {
     oneWayDistance: d,
     isReturnTrip,
-    chargeMeterReturn,
     effectiveDistance,
     fuelLiters,
     totalFuelCost,
     totalMaintenanceCost,
     totalRunningCost,
     oneWayMeterFare,
-    chargedMeterFare,
-    netProfit,
-    profitMarginPercent,
+    roundTripMeterFare,
+    oneWayNetProfit,
+    oneWayProfitMargin,
+    emptyReturnNetProfit,
+    emptyReturnMargin,
+    roundTripNetProfit,
+    roundTripMargin,
     costPerKm: effectiveDistance > 0 ? totalRunningCost / effectiveDistance : 0,
   };
 }
