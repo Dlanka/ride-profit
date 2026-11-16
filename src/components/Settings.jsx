@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Settings as SettingsIcon, Bike, Car, Wrench, Save, RotateCcw,
-  Fuel, DollarSign, Target, CheckCircle2, Sparkles
+  Fuel, DollarSign, Target, CheckCircle2, Sparkles, Gauge
 } from 'lucide-react';
 import { calcFuelCostPerKm, calcTotalCostPerKm, PRESETS, DEFAULT_SETTINGS } from '../utils/calculations';
 
@@ -10,7 +10,16 @@ const STORAGE_KEY = 'rideprofit_settings_v1';
 export function loadSettings() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const isThreeWheeler = parsed.vehicleType === 'threeWheeler';
+      return {
+        ...DEFAULT_SETTINGS,
+        firstKmFare: isThreeWheeler ? 100 : 75,
+        secondKmRate: isThreeWheeler ? 85 : 55,
+        ...parsed,
+      };
+    }
   } catch (e) {
     console.error('Failed to load settings:', e);
   }
@@ -245,6 +254,69 @@ export default function SettingsTab({ t, settings, setSettings }) {
             </span>
           </div>
           <p className="text-[10px] text-slate-400 mt-1">{t.dailyTargetHint}</p>
+        </div>
+      </div>
+
+      {/* Meter Fare Rates Configuration */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-lg shadow-black/20">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+            <Gauge className="w-4 h-4 text-amber-400" />
+          </div>
+          <div>
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider leading-tight">
+              {t.meterRatesTitle}
+            </h3>
+            <p className="text-[10px] text-slate-400">{t.meterRatesSub}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {/* 1st KM Base Fare */}
+          <div>
+            <label className="text-xs font-semibold text-slate-300 flex items-center gap-1 mb-1.5 h-5">
+              <span className="truncate">{t.firstKmFare}</span>
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                step="5"
+                value={localSettings.firstKmFare ?? ''}
+                onChange={(e) => updateField('firstKmFare', parseFloat(e.target.value) || 0)}
+                className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-500 font-medium text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all font-mono"
+                placeholder={localSettings.vehicleType === 'threeWheeler' ? '100' : '75'}
+              />
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
+                LKR
+              </span>
+            </div>
+            <p className="text-[9px] text-slate-500 mt-1 truncate">
+              {localSettings.vehicleType === 'threeWheeler' ? 'Default: 100 LKR' : 'Default: 75 LKR'}
+            </p>
+          </div>
+
+          {/* 2nd KM Onwards Rate */}
+          <div>
+            <label className="text-xs font-semibold text-slate-300 flex items-center gap-1 mb-1.5 h-5">
+              <span className="truncate">{t.secondKmRate}</span>
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                step="5"
+                value={localSettings.secondKmRate ?? ''}
+                onChange={(e) => updateField('secondKmRate', parseFloat(e.target.value) || 0)}
+                className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-500 font-medium text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all font-mono"
+                placeholder={localSettings.vehicleType === 'threeWheeler' ? '85' : '55'}
+              />
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
+                LKR/km
+              </span>
+            </div>
+            <p className="text-[9px] text-slate-500 mt-1 truncate">
+              {localSettings.vehicleType === 'threeWheeler' ? 'Default: 85 LKR/km' : 'Default: 55 LKR/km'}
+            </p>
+          </div>
         </div>
       </div>
 

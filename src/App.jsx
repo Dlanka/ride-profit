@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Zap, Settings as SettingsIcon, Globe, Fuel } from 'lucide-react';
+import { TrendingUp, Zap, Settings as SettingsIcon, Globe, Navigation } from 'lucide-react';
 import translations from './translations';
 import SettingsTab, { loadSettings, saveSettings } from './components/Settings';
 import TrackerTab from './components/Tracker';
 import HireCheckTab from './components/HireCheck';
+import TripCostTab from './components/TripCost';
 
 const LANG_KEY = 'rideprofit_lang_v1';
 
@@ -34,6 +35,7 @@ function App() {
   const tabs = [
     { id: 'tracker', label: t.tabTracker, icon: TrendingUp },
     { id: 'hireCheck', label: t.tabHireCheck, icon: Zap },
+    { id: 'tripCost', label: t.tabTripCost, icon: Navigation },
     { id: 'settings', label: t.tabSettings, icon: SettingsIcon },
   ];
 
@@ -79,13 +81,16 @@ function App() {
         {activeTab === 'hireCheck' && (
           <HireCheckTab t={t} settings={settings} />
         )}
+        {activeTab === 'tripCost' && (
+          <TripCostTab t={t} settings={settings} />
+        )}
         {activeTab === 'settings' && (
           <SettingsTab t={t} settings={settings} setSettings={setSettings} />
         )}
       </main>
 
       {/* Sleek Frosted Glass Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-slate-900/95 backdrop-blur-md border-t border-slate-800/90 z-50 px-2 py-1.5">
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-slate-900/95 backdrop-blur-md border-t border-slate-800/90 z-50 px-1.5 py-1.5">
         <div className="flex items-center justify-around">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -94,7 +99,7 @@ function App() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all duration-200 ${
+                className={`flex-1 flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl transition-all duration-200 ${
                   isActive
                     ? 'text-emerald-400 font-bold bg-emerald-500/10'
                     : 'text-slate-400 hover:text-slate-200 font-medium'
@@ -106,7 +111,7 @@ function App() {
                     <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-400" />
                   )}
                 </div>
-                <span className={`text-[11px] mt-1 tracking-tight leading-none ${isActive ? 'text-emerald-400' : 'text-slate-400'}`}>
+                <span className={`text-[10px] mt-1 tracking-tight leading-none text-center truncate max-w-[80px] ${isActive ? 'text-emerald-400 font-bold' : 'text-slate-400'}`}>
                   {tab.label}
                 </span>
               </button>

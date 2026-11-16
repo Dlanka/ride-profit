@@ -27,18 +27,25 @@
   - Compute total day profit by entering Total App Earnings + Cash Pickups.
   - Distance via Direct KM or **Start & End Odometer Readings** (auto-calculates distance).
 
-### 3. 📅 Past Days History & Monthly Summary (පසුගිය දින වාර්තා)
+### 3. 🧭 Trip Cost & Meter Fare Calculator (ගමන් වියදම්)
+- **Real-Time Running Cost Breakdown:** Computes Effective Total Distance (km), Fuel Needed (Liters), Fuel Cost (LKR), Maintenance Cost (LKR), and Total Running Cost (Break-Even LKR).
+- **One-Way vs Return Trip (1x vs 2x Distance):** Toggle between one-way journeys and return trips (e.g. empty return).
+- **Sri Lankan Meter Taxi Fare:** Automatically calculates standard meter taxi fare based on 1st KM Base Fare and 2nd KM Onwards Rate.
+- **Estimated Net Profit at Meter Rate:** Shows exact profit remaining after subtracting fuel and vehicle maintenance costs.
+
+### 4. 📅 Past Days History & Monthly Summary (පසුගිය දින වාර්තා)
 - **Monthly Net Profit Card:** Real-time calculation of this month's total net profit, monthly gross earnings, distance, and trip count.
 - **Daily Log Archive:** Interactive list of previous tracked days saved in `localStorage`.
 
-### 4. ⚙️ Vehicle & Fuel Cost Settings (සැකසුම්)
+### 5. ⚙️ Vehicle & Meter Settings (සැකසුම්)
 - **Vehicle Presets:**
-  - **Motorbike (මෝටර් බයිසිකලය):** 47 km/L, LKR 320/L, LKR 4.00/km maintenance.
-  - **Three-Wheeler (ත්‍රී වීලරය):** 22 km/L, LKR 320/L, LKR 4.50/km maintenance.
+  - **Motorbike (මෝටර් බයිසිකලය):** 47 km/L, LKR 320/L, LKR 4.00/km maintenance, 1st KM LKR 75, 2nd KM+ LKR 55/km.
+  - **Three-Wheeler (ත්‍රී වීලරය):** 22 km/L, LKR 320/L, LKR 4.50/km maintenance, 1st KM LKR 100, 2nd KM+ LKR 85/km.
+- **Meter Fare Configuration:** Custom settings for 1st KM Base Fare (LKR) and 2nd KM Onwards Rate (LKR/km).
 - **Customizable:** Freely adjust fuel efficiency, petrol price (LKR/L), maintenance cost (LKR/km), and daily leasing target.
 - **Live Running Cost Metric:** Automatically computes Fuel Cost/km and Total Running Cost/km.
 
-### 5. 🌙 Dark Mode & Mobile-First Design
+### 6. 🌙 Dark Mode & Mobile-First Design
 - **Night-Drive Optimized:** High-contrast OLED dark palette (`#090D16`) eliminating screen glare while driving at night.
 - **Bilingual (සිංහල / English):** One-tap language toggle in the header with authentic Sri Lankan driver terminology.
 - **PWA Ready:** Includes `manifest.json` for "Add to Home Screen" installation on Android and iOS.

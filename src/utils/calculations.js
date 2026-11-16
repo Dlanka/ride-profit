@@ -338,6 +338,75 @@ export function getMonthlySummary() {
 }
 
 /**
+ * Calculate standard Sri Lankan meter taxi fare
+ * @param {number} distance - Trip distance in km
+ * @param {number} firstKmFare - 1st KM base fare (LKR)
+ * @param {number} secondKmRate - 2nd KM onwards rate (LKR/km)
+ * @returns {number} Meter fare in LKR
+ */
+export function calcMeterFare(distance, firstKmFare = 100, secondKmRate = 85) {
+  const d = Math.max(0, parseFloat(distance) || 0);
+  if (d <= 0) return 0;
+  const f1 = parseFloat(firstKmFare) || 0;
+  const f2 = parseFloat(secondKmRate) || 0;
+  if (d <= 1) return f1;
+  return f1 + ((d - 1) * f2);
+}
+
+/**
+ * Calculate full trip cost details: effective distance, fuel needed, total costs, meter fare, and net profit
+ * @param {object} params
+ * @param {number} params.distance - One-way trip distance (km)
+ * @param {boolean} params.isReturnTrip - Whether vehicle travels return journey (2x distance)
+ * @param {boolean} [params.chargeMeterReturn] - Whether meter fare is charged both ways
+ * @param {object} params.settings - Vehicle & meter settings
+ * @returns {object} Breakdown of trip costs and meter earnings
+ */
+export function calcTripCostDetails({ distance, isReturnTrip, chargeMeterReturn = false, settings }) {
+  const d = Math.max(0, parseFloat(distance) || 0);
+  const {
+    petrolPrice = 320,
+    kmPerLiter = 22,
+    maintenancePerKm = 4.5,
+    firstKmFare = 100,
+    secondKmRate = 85,
+  } = settings;
+
+  const effectiveDistance = isReturnTrip ? d * 2 : d;
+  const fuelCostPerKm = calcFuelCostPerKm(petrolPrice, kmPerLiter);
+  const fuelLiters = kmPerLiter > 0 ? effectiveDistance / kmPerLiter : 0;
+  const totalFuelCost = fuelCostPerKm * effectiveDistance;
+  const totalMaintenanceCost = (maintenancePerKm || 0) * effectiveDistance;
+  const totalRunningCost = totalFuelCost + totalMaintenanceCost;
+
+  // Single-way standard meter fare
+  const oneWayMeterFare = calcMeterFare(d, firstKmFare, secondKmRate);
+
+  // Meter fare charged to passenger
+  const chargedMeterFare = isReturnTrip && chargeMeterReturn ? oneWayMeterFare * 2 : oneWayMeterFare;
+
+  // Net profit at meter rate after subtracting total vehicle running cost
+  const netProfit = chargedMeterFare - totalRunningCost;
+  const profitMarginPercent = chargedMeterFare > 0 ? (netProfit / chargedMeterFare) * 100 : 0;
+
+  return {
+    oneWayDistance: d,
+    isReturnTrip,
+    chargeMeterReturn,
+    effectiveDistance,
+    fuelLiters,
+    totalFuelCost,
+    totalMaintenanceCost,
+    totalRunningCost,
+    oneWayMeterFare,
+    chargedMeterFare,
+    netProfit,
+    profitMarginPercent,
+    costPerKm: effectiveDistance > 0 ? totalRunningCost / effectiveDistance : 0,
+  };
+}
+
+/**
  * Default settings presets
  */
 export const PRESETS = {
@@ -347,6 +416,8 @@ export const PRESETS = {
     petrolPrice: 320,
     maintenancePerKm: 4.0,
     dailyTarget: 0,
+    firstKmFare: 75,
+    secondKmRate: 55,
   },
   threeWheeler: {
     vehicleType: 'threeWheeler',
@@ -354,6 +425,8 @@ export const PRESETS = {
     petrolPrice: 320,
     maintenancePerKm: 4.5,
     dailyTarget: 0,
+    firstKmFare: 100,
+    secondKmRate: 85,
   },
 };
 

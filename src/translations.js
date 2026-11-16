@@ -7,6 +7,7 @@ const translations = {
     // Tabs
     tabTracker: "Today's Profit",
     tabHireCheck: 'Hire Check',
+    tabTripCost: 'Trip Cost',
     tabSettings: 'Settings',
 
     // Settings
@@ -23,6 +24,10 @@ const translations = {
     totalRunningCost: 'Total Running Cost per KM',
     dailyTarget: 'Daily Leasing / Target Goal (LKR)',
     dailyTargetHint: 'Set 0 to disable progress tracking',
+    meterRatesTitle: 'Meter Fare Rates (Standard Taxi)',
+    meterRatesSub: 'Standard rates used to calculate passenger meter fares',
+    firstKmFare: '1st KM Base Fare (LKR)',
+    secondKmRate: '2nd KM Onwards Rate (LKR/km)',
     settingsSaved: 'Settings Saved Successfully!',
     lkrPerKm: 'LKR / km',
     petrol92: 'Petrol 92 (320)',
@@ -120,6 +125,31 @@ const translations = {
     hireCheckPlaceholderTitle: 'Instant Ride Decision',
     hireCheckPlaceholderDesc: 'Type Offered Fare and Trip Distance above to instantly see if this hire is profitable.',
     
+    // Trip Cost Tab
+    tripCostTitle: 'Trip Cost & Meter Fare',
+    tripCostSubtitle: 'Calculate vehicle running costs & meter earnings',
+    plannedDistance: 'Trip Distance (One-Way km)',
+    tripType: 'Trip Type',
+    oneWayTrip: 'One-Way Trip (1x Distance)',
+    returnTrip: 'Round Trip (2x Distance)',
+    chargeReturnMeter: 'Charge meter fare for return journey too (2x Fare)',
+    vehicleCostCardTitle: 'Actual Vehicle Running Cost',
+    totalEffectiveDist: 'Effective Total Distance',
+    fuelNeeded: 'Fuel Required',
+    liters: 'Liters',
+    breakEvenCost: 'Total Operating Cost (Break-Even)',
+    costPerKm: 'Cost per KM',
+    meterFareCardTitle: 'Standard Meter Taxi Fare',
+    meterFareSub: 'Standard rate to charge the passenger',
+    oneWayFare: 'One-Way Meter Fare',
+    roundTripFare: 'Round-Trip Meter Fare',
+    netProfitCardTitle: 'Estimated Net Profit at Meter Rate',
+    profitMargin: 'Profit Margin',
+    profitableMeterMsg: 'Profitable trip at standard meter rate! Safe to take.',
+    lossMeterMsg: 'Operating costs exceed meter fare (empty return distance is too high).',
+    tripCostPlaceholderTitle: 'Instant Trip Costing',
+    tripCostPlaceholder: 'Enter planned trip distance (km) above to see vehicle running costs, fuel liters, and standard meter taxi earnings.',
+    
     // Monthly & History Section
     historyTitle: 'Past Days History',
     historySubtitle: 'Review past earnings and monthly totals',
@@ -155,6 +185,7 @@ const translations = {
     // Tabs
     tabTracker: 'දවසේ ලාභය',
     tabHireCheck: 'හයර් Check',
+    tabTripCost: 'ගමන් වියදම්',
     tabSettings: 'සැකසුම්',
 
     // Settings
@@ -171,6 +202,10 @@ const translations = {
     totalRunningCost: 'KM 1කට සම්පූර්ණ ධාවන වියදම',
     dailyTarget: 'දෛනික ලීසිං / ඉලක්ක මුදල (LKR)',
     dailyTargetHint: 'ඉලක්කයක් නැතිනම් 0 යොදන්න',
+    meterRatesTitle: 'මීටර් ටැක්සි ගාස්තු සැකසුම්',
+    meterRatesSub: 'මගී ගාස්තු ගණනය සඳහා භාවිත වන සාමාන්‍ය මීටර් අනුපාත',
+    firstKmFare: 'පළමු KM 1 සඳහා ආරම්භක ගාස්තුව (LKR)',
+    secondKmRate: '2වන KM සිට එක් KM එකකට (LKR/km)',
     settingsSaved: 'සැකසුම් සාර්ථකව සුරකින ලදී!',
     lkrPerKm: 'LKR / km',
     petrol92: 'පෙට්‍රල් 92 (320)',
@@ -267,6 +302,31 @@ const translations = {
     earningsAfterCommission: 'කොමිස් කැපුණු පසු මුදල',
     hireCheckPlaceholderTitle: 'ක්ෂණික තීරණයක් ගන්න',
     hireCheckPlaceholderDesc: 'ඉහතින් ගාස්තුව සහ දුර ඇතුළත් කළ වහාම මෙම හයර් එක ලාභද පාඩුද යන්න මෙහි පෙන්වනු ඇත.',
+    
+    // Trip Cost Tab
+    tripCostTitle: 'ගමන් වියදම් සහ මීටර් ගාස්තුව',
+    tripCostSubtitle: 'සැබෑ වාහන ධාවන වියදම සහ මීටර් ලාභය ගණනය කරන්න',
+    plannedDistance: 'ගමන් දුර (එක් අතකට km)',
+    tripType: 'ගමන් ස්වභාවය',
+    oneWayTrip: 'එක් අතකට පමණයි (1x දුර)',
+    returnTrip: 'යන්න සහ එන්න (2x දුර)',
+    chargeReturnMeter: 'ආපසු ගමන සඳහාත් මීටර් ගාස්තුව අය කෙරේ (2x Fare)',
+    vehicleCostCardTitle: 'සැබෑ වාහන ධාවන වියදම',
+    totalEffectiveDist: 'මුළු ධාවනය වන දුර',
+    fuelNeeded: 'අවශ්‍ය ඉන්ධන ප්‍රමාණය',
+    liters: 'ලීටර්',
+    breakEvenCost: 'සම්පූර්ණ ධාවන වියදම (Break-Even)',
+    costPerKm: 'KM එකක වියදම',
+    meterFareCardTitle: 'සම්මත මීටර් ටැක්සි ගාස්තුව',
+    meterFareSub: 'මගියාගෙන් අය කළ යුතු සම්මත ගාස්තුව',
+    oneWayFare: 'තනි ගමනේ මීටර් ගාස්තුව',
+    roundTripFare: 'යන/එන දෙකටම මීටර් ගාස්තුව',
+    netProfitCardTitle: 'මීටරයෙන් ඉතිරිවන ශුද්ධ ලාභය',
+    profitMargin: 'ලාභ ප්‍රතිශතය',
+    profitableMeterMsg: 'මීටර් ගාස්තුවෙන් පසු හොඳ ලාභයක් ඉතිරි වේ!',
+    lossMeterMsg: 'හිස් ආපසු ඒම නිසා වියදම මීටර් ගාස්තුවට වඩා වැඩියි (පාඩුයි).',
+    tripCostPlaceholderTitle: 'ගමන් වියදම ක්ෂණිකව බලන්න',
+    tripCostPlaceholder: 'සැබෑ තෙල් වියදම, අවශ්‍ය ලීටර් ප්‍රමාණය සහ මීටර් ලාභය බැලීමට ඉහතින් ගමන් දුර (km) ඇතුළත් කරන්න.',
     
     // Monthly & History Section
     historyTitle: 'පසුගිය දින වාර්තා',
