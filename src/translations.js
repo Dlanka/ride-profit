@@ -61,8 +61,8 @@ const translations = {
     
     // Individual hire
     hireType: 'Hire Category',
-    typeApp: 'App (PickMe / Uber)',
-    typeRoad: 'Road Pickup (Cash / 0% Com)',
+    typeApp: 'App Hire',
+    typeRoad: 'Road Pickup',
     fareMode: 'Input Amount',
     modeNet: 'Net Earnings Received',
     modeGross: 'Gross Fare (Auto-deduct Commission)',
@@ -279,8 +279,8 @@ const translations = {
     
     // Individual hire
     hireType: 'හයර් වර්ගය',
-    typeApp: 'App හයර් (PickMe / Uber)',
-    typeRoad: 'කමිෂන් නැති හයර් (පාරෙන් / Direct)',
+    typeApp: 'App හයර්',
+    typeRoad: 'පාරෙන් (Cash)',
     fareMode: 'මුදල ඇතුළත් කිරීම',
     modeNet: 'අතට ලැබුණු ශුද්ධ මුදල (Net)',
     modeGross: 'මගියා දුන් මුදල (Gross Fare)',

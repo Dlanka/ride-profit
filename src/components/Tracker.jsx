@@ -355,24 +355,26 @@ export default function TrackerTab({ t, settings }) {
                 <button
                   type="button"
                   onClick={() => setHireType('app')}
-                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
+                  className={`whitespace-nowrap text-xs sm:text-sm px-2 py-2.5 flex items-center justify-center gap-1.5 rounded-xl border font-bold transition-all ${
                     hireType === 'app'
                       ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-300'
                       : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
                   }`}
                 >
-                  📱 {t.typeApp}
+                  <span>📱</span>
+                  <span>{t.typeApp}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setHireType('road')}
-                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
+                  className={`whitespace-nowrap text-xs sm:text-sm px-2 py-2.5 flex items-center justify-center gap-1.5 rounded-xl border font-bold transition-all ${
                     hireType === 'road'
                       ? 'bg-amber-500/15 border-amber-500/50 text-amber-300'
                       : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
                   }`}
                 >
-                  💵 {t.typeRoad}
+                  <span>💵</span>
+                  <span>{t.typeRoad}</span>
                 </button>
               </div>
             </div>
