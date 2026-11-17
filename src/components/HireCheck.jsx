@@ -63,7 +63,15 @@ export default function HireCheckTab({ t, settings }) {
 
   // Dynamic calculation for Quick Fare Cheat-Sheet table
   const cheatSheetData = useMemo(() => {
-    const distances = [2, 5, 8, 10, 15, 20, 30];
+    const distances = [
+      { dist: 2, maxPickup: '0.5' },
+      { dist: 5, maxPickup: '1.0' },
+      { dist: 8, maxPickup: '1.5' },
+      { dist: 10, maxPickup: '2.0' },
+      { dist: 15, maxPickup: '2.5' },
+      { dist: 20, maxPickup: '3.0' },
+      { dist: 30, maxPickup: '3.5' },
+    ];
     const { petrolPrice, kmPerLiter, maintenancePerKm, vehicleType } = settings;
     const runningCostPerKm = calcTotalCostPerKm(petrolPrice, kmPerLiter, maintenancePerKm);
 
@@ -80,7 +88,7 @@ export default function HireCheckTab({ t, settings }) {
       : (settings?.defaultDeduction ?? 0);
     const commDivisor = commRate < 100 ? (1 - commRate / 100) : 1;
 
-    const rows = distances.map((dist) => {
+    const rows = distances.map(({ dist, maxPickup }) => {
       // 1x trip: running cost for dist + target profit for dist
       const netNeededOneWay = (runningCostPerKm * dist) + (marginPerKm * dist);
       const minGrossOneWay = (netNeededOneWay + ded) / commDivisor;
@@ -91,6 +99,7 @@ export default function HireCheckTab({ t, settings }) {
 
       return {
         dist,
+        maxPickup,
         oneWay: Math.round(minGrossOneWay),
         emptyReturn: Math.round(minGrossReturn),
       };
@@ -548,13 +557,18 @@ export default function HireCheckTab({ t, settings }) {
                       key={row.dist}
                       className="border-b border-slate-800/50 odd:bg-slate-950/40 hover:bg-slate-800/30 transition-colors"
                     >
-                      <td className="py-2.5 px-3 font-mono font-bold text-slate-200">
-                        {row.dist} km
+                      <td className="py-2.5 px-3 align-middle">
+                        <div className="font-mono font-bold text-slate-200 leading-tight">
+                          {row.dist} km
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-sans tracking-tight mt-0.5 whitespace-nowrap">
+                          ({(t.cheatPickupSub || 'Pickup < {km} km').replace('{km}', row.maxPickup)})
+                        </div>
                       </td>
-                      <td className="py-2.5 px-3 font-mono font-bold text-right text-emerald-400">
+                      <td className="py-2.5 px-3 font-mono font-bold text-right text-emerald-400 align-middle">
                         LKR {row.oneWay.toLocaleString()}
                       </td>
-                      <td className="py-2.5 px-3 font-mono font-extrabold text-right text-amber-400 bg-amber-500/5">
+                      <td className="py-2.5 px-3 font-mono font-extrabold text-right text-amber-400 bg-amber-500/5 align-middle">
                         LKR {row.emptyReturn.toLocaleString()}
                       </td>
                     </tr>

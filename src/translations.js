@@ -139,7 +139,8 @@ const translations = {
     cheatColDistance: 'Trip Dist',
     cheatColOneWay: 'Min Fare (1x)',
     cheatColEmptyReturn: 'Empty Return (2x)',
-    cheatSheetNote: 'If the offered PickMe/Uber fare is below these amounts, consider rejecting unless heading that way.',
+    cheatPickupSub: 'Pickup < {km} km',
+    cheatSheetNote: 'If the offered fare is below these rates, consider rejecting. If your pickup distance exceeds the shown limit (Pickup < X km), add that extra pickup distance to the trip distance when checking.',
     cheatTargetMargin: 'Target Profit',
     cheatRunningCost: 'Running Cost',
     
@@ -356,7 +357,8 @@ const translations = {
     cheatColDistance: 'ගමන් දුර',
     cheatColOneWay: 'අවම ගාස්තුව (1x)',
     cheatColEmptyReturn: 'හිස් ආපසු (2x)',
-    cheatSheetNote: 'ලැබෙන PickMe/Uber ගාස්තුව මෙම අගයන්ට වඩා අඩු නම්, එම ප්‍රදේශයට වෙනත් ගමනක් නොමැති නම් Reject කිරීම වඩාත් සුදුසුය.',
+    cheatPickupSub: 'පිකප් < {km} km',
+    cheatSheetNote: 'ලැබෙන ගාස්තුව මෙම අගයන්ට වඩා අඩු නම් Reject කිරීම වඩාත් සුදුසුය. පිකප් දුර (පිකප් < X km) සීමාවට වඩා වැඩි නම්, එම අමතර පිකප් දුරද ගමන් දුරට එකතු කර වගුව බලන්න.',
     cheatTargetMargin: 'ඉලක්ක ලාභය',
     cheatRunningCost: 'ධාවන වියදම',
     
