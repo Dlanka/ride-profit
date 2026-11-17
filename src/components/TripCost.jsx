@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
 import {
   Navigation, Route, Fuel, Wrench, Gauge, Banknote,
-  CheckCircle2, AlertTriangle, RotateCcw,
-  Sparkles, Car, ArrowRight
+  CheckCircle2, AlertTriangle, AlertCircle, RotateCcw,
+  Sparkles, Car, Clock, Percent
 } from 'lucide-react';
 import { calcTripCostDetails, formatLKR } from '../utils/calculations';
 
@@ -12,6 +12,12 @@ export default function TripCostTab({ t, settings }) {
   const [startOdo, setStartOdo] = useState('');
   const [endOdo, setEndOdo] = useState('');
   const [isReturnTrip, setIsReturnTrip] = useState(false);
+  const [waitingMinutes, setWaitingMinutes] = useState('');
+
+  // Custom Quote & Long-Trip Discount Calculator state
+  const [customFare, setCustomFare] = useState('');
+  const [desiredProfit, setDesiredProfit] = useState('');
+  const [discountPct, setDiscountPct] = useState(0);
 
   // Live real-time odometer net calculation
   const odoDistance = useMemo(() => {
@@ -36,14 +42,55 @@ export default function TripCostTab({ t, settings }) {
       distance: activeDistance,
       isReturnTrip: isRoundTripActive,
       settings,
+      waitingMinutes: parseFloat(waitingMinutes) || 0,
     });
-  }, [activeDistance, isRoundTripActive, settings]);
+  }, [activeDistance, isRoundTripActive, settings, waitingMinutes]);
+
+  // Base standard meter fare for active scenario
+  const standardMeterFare = useMemo(() => {
+    if (!tripDetails) return 0;
+    return isRoundTripActive ? tripDetails.roundTripMeterFare : tripDetails.oneWayMeterFare;
+  }, [tripDetails, isRoundTripActive]);
+
+  // Custom quote values
+  const activeQuotedFare = customFare !== '' ? (parseFloat(customFare) || 0) : standardMeterFare;
+  const quoteNetProfit = tripDetails ? activeQuotedFare - tripDetails.totalRunningCost : 0;
+  const quoteDiscountVsMeter = standardMeterFare > 0 ? ((standardMeterFare - activeQuotedFare) / standardMeterFare) * 100 : 0;
+
+  const handleDiscountSelect = (pct) => {
+    setDiscountPct(pct);
+    const discounted = Math.round(standardMeterFare * (1 - pct / 100));
+    setCustomFare(String(discounted));
+    setDesiredProfit('');
+  };
+
+  const handleCustomFareChange = (val) => {
+    setCustomFare(val);
+    setDiscountPct(null);
+    setDesiredProfit('');
+  };
+
+  const handleDesiredProfitChange = (val) => {
+    setDesiredProfit(val);
+    setDiscountPct(null);
+    const p = parseFloat(val);
+    if (!isNaN(p) && tripDetails) {
+      const needed = Math.round(tripDetails.totalRunningCost + Math.max(0, p));
+      setCustomFare(String(needed));
+    } else if (val === '') {
+      setCustomFare('');
+    }
+  };
 
   const handleClear = () => {
     setDistance('');
     setStartOdo('');
     setEndOdo('');
     setIsReturnTrip(false);
+    setWaitingMinutes('');
+    setCustomFare('');
+    setDesiredProfit('');
+    setDiscountPct(0);
   };
 
   const quickDistances = [2, 3, 5, 8, 12, 15, 20, 30];
@@ -62,7 +109,7 @@ export default function TripCostTab({ t, settings }) {
           </div>
         </div>
 
-        {(distance || startOdo || endOdo) && (
+        {(distance || startOdo || endOdo || waitingMinutes) && (
           <button
             type="button"
             onClick={handleClear}
@@ -77,18 +124,18 @@ export default function TripCostTab({ t, settings }) {
       {/* Input Card */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3.5 shadow-lg shadow-black/20">
         {/* Calculation Mode Toggle Segmented Pills */}
-        <div className="flex bg-slate-950 border border-slate-800 rounded-xl p-1">
+        <div className="flex bg-slate-950 border border-slate-800 rounded-xl p-1 gap-1">
           <button
             type="button"
             onClick={() => setCalcMode('direct')}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
               calcMode === 'direct'
                 ? 'bg-sky-500/20 border border-sky-500/50 text-sky-300 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Route className="w-3.5 h-3.5" />
-            <span>{t.directKm}</span>
+            <Route className="w-3.5 h-3.5 shrink-0" />
+            <span className="whitespace-nowrap">{t.directKm}</span>
           </button>
           <button
             type="button"
@@ -96,14 +143,14 @@ export default function TripCostTab({ t, settings }) {
               setCalcMode('odometer');
               setIsReturnTrip(false);
             }}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
               calcMode === 'odometer'
                 ? 'bg-purple-500/20 border border-purple-500/50 text-purple-300 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Gauge className="w-3.5 h-3.5" />
-            <span>{t.odometerReadings}</span>
+            <Gauge className="w-3.5 h-3.5 shrink-0" />
+            <span className="whitespace-nowrap">{t.odometerShort || 'Odometer'}</span>
           </button>
         </div>
 
@@ -133,23 +180,27 @@ export default function TripCostTab({ t, settings }) {
                 </span>
               </div>
 
-              {/* Quick Distance Chips */}
-              <div className="flex items-center gap-1.5 mt-2 overflow-x-auto no-scrollbar py-0.5">
-                <span className="text-[10px] text-slate-500 font-mono shrink-0">KM:</span>
-                {quickDistances.map((km) => (
-                  <button
-                    key={km}
-                    type="button"
-                    onClick={() => setDistance(String(km))}
-                    className={`text-[11px] px-2 py-0.5 rounded-lg border font-mono transition-all shrink-0 ${
-                      distance === String(km)
-                        ? 'bg-sky-500/20 border-sky-500/50 text-sky-300 font-bold'
-                        : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
-                    }`}
-                  >
-                    {km}km
-                  </button>
-                ))}
+              {/* Quick Distance Chips (4-Column Grid) */}
+              <div className="mt-2.5">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] text-slate-500 font-mono">Quick KM:</span>
+                </div>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {quickDistances.map((km) => (
+                    <button
+                      key={km}
+                      type="button"
+                      onClick={() => setDistance(String(km))}
+                      className={`text-xs py-1.5 px-1 rounded-lg border font-mono font-medium transition-all text-center ${
+                        distance === String(km)
+                          ? 'bg-sky-500/20 border-sky-500/50 text-sky-300 font-bold shadow-sm'
+                          : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                      }`}
+                    >
+                      {km}km
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -255,6 +306,61 @@ export default function TripCostTab({ t, settings }) {
             </p>
           </div>
         )}
+
+        {/* Waiting Time Input (mins) */}
+        <div className="pt-3 border-t border-slate-800/80">
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span>{t.waitingTime}</span>
+            </label>
+            <span className="text-[10px] text-slate-500 font-mono">
+              @ LKR {settings.waitingRatePerMin ?? (settings.vehicleType === 'threeWheeler' ? 5 : 4)}/min
+            </span>
+          </div>
+
+          <div className="relative">
+            <input
+              type="number"
+              step="5"
+              min="0"
+              value={waitingMinutes}
+              onChange={(e) => setWaitingMinutes(e.target.value)}
+              placeholder="0"
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-600 font-mono text-base font-bold focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all"
+            />
+            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-500">
+              {t.mins || 'mins'}
+            </span>
+          </div>
+
+          {/* Quick Add Pills: +15m, +30m, +60m */}
+          <div className="flex items-center gap-1.5 mt-2">
+            <span className="text-[10px] text-slate-500 font-mono shrink-0">Quick:</span>
+            {[15, 30, 60].map((mins) => (
+              <button
+                key={mins}
+                type="button"
+                onClick={() => {
+                  const current = parseFloat(waitingMinutes) || 0;
+                  setWaitingMinutes(String(current + mins));
+                }}
+                className="flex-1 text-xs py-1.5 rounded-lg border border-slate-800 bg-slate-950/80 text-amber-300/90 hover:border-amber-500/40 hover:bg-amber-500/10 font-mono font-medium transition-all text-center active:scale-95"
+              >
+                +{mins}m
+              </button>
+            ))}
+            {parseFloat(waitingMinutes) > 0 && (
+              <button
+                type="button"
+                onClick={() => setWaitingMinutes('')}
+                className="text-[11px] px-2.5 py-1.5 rounded-lg border border-slate-800 bg-slate-950/80 text-slate-400 hover:text-rose-400 font-mono transition-all active:scale-95"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Real-time Calculation Results */}
@@ -307,9 +413,21 @@ export default function TripCostTab({ t, settings }) {
                   {calcMode === 'odometer' ? t.odometerDrivenTitle : t.oneWayFare} ({tripDetails.oneWayDistance.toFixed(1)} km)
                 </span>
                 <span className="font-mono font-bold text-slate-100">
-                  {formatLKR(tripDetails.oneWayMeterFare)}
+                  {formatLKR(tripDetails.totalWaitingCharge > 0 ? tripDetails.baseOneWayMeterFare : tripDetails.oneWayMeterFare)}
                 </span>
               </div>
+
+              {tripDetails.totalWaitingCharge > 0 && (
+                <div className="flex justify-between items-center py-1 border-b border-slate-800/80 text-amber-300">
+                  <span className="font-medium flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    {t.waitingChargeItem || 'Waiting Charge'} ({tripDetails.waitingMinutes} {t.mins || 'mins'} @ LKR {tripDetails.waitingRatePerMin}/min)
+                  </span>
+                  <span className="font-mono font-bold text-amber-400">
+                    +{formatLKR(tripDetails.totalWaitingCharge)}
+                  </span>
+                </div>
+              )}
 
               {isRoundTripActive && (
                 <div className="flex justify-between items-center py-1 border-b border-slate-800/80">
@@ -324,12 +442,14 @@ export default function TripCostTab({ t, settings }) {
               )}
 
               {/* Rate Schedule */}
-              <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl px-3 py-2 text-[11px] text-slate-400 font-mono flex items-center justify-between">
+              <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl px-3 py-2 text-[10px] sm:text-[11px] text-slate-400 font-mono flex items-center justify-between flex-wrap gap-1">
                 <span className="text-slate-500 font-semibold">Rate Schedule:</span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <span>1st KM: <strong className="text-slate-200">LKR {settings.firstKmFare ?? 100}</strong></span>
                   <span className="text-slate-600">•</span>
                   <span>After: <strong className="text-slate-200">LKR {settings.secondKmRate ?? 85}/km</strong></span>
+                  <span className="text-slate-600">•</span>
+                  <span>Wait: <strong className="text-slate-200">LKR {tripDetails.waitingRatePerMin}/min</strong></span>
                 </div>
               </div>
             </div>
@@ -589,6 +709,180 @@ export default function TripCostTab({ t, settings }) {
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* ======================================================== */}
+          {/* 4th: Custom Quote & Long-Trip Discount Calculator        */}
+          {/* ======================================================== */}
+          <div className={`rounded-2xl p-4 shadow-xl border transition-all ${
+            quoteNetProfit < 0
+              ? 'bg-gradient-to-br from-rose-950/40 via-slate-900 to-slate-950 border-rose-500/50 shadow-rose-950/20'
+              : quoteNetProfit < tripDetails.totalRunningCost * 0.2
+              ? 'bg-gradient-to-br from-amber-950/30 via-slate-900 to-slate-950 border-amber-500/40 shadow-amber-950/20'
+              : 'bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border-slate-800 shadow-black/20'
+          }`}>
+            <div className="flex items-center justify-between mb-3 border-b border-slate-800/80 pb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center">
+                  <Percent className="w-4 h-4 text-sky-400" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-white uppercase tracking-wider leading-tight">
+                    {t.customQuoteTitle}
+                  </h3>
+                  <p className="text-[10px] text-slate-400">{t.customQuoteSubtitle}</p>
+                </div>
+              </div>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold border ${
+                quoteNetProfit < 0
+                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
+                  : quoteNetProfit < tripDetails.totalRunningCost * 0.2
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+              }`}>
+                {quoteNetProfit < 0
+                  ? t.quoteLossBadge
+                  : quoteNetProfit < tripDetails.totalRunningCost * 0.2
+                  ? t.quoteLowBadge
+                  : t.quoteHealthyBadge}
+              </span>
+            </div>
+
+            {/* Quick Discount Pills: 0% (Full), -10%, -15%, -20% */}
+            <div className="mb-3">
+              <label className="text-[11px] font-semibold text-slate-300 block mb-1.5">
+                {t.quickDiscounts}
+              </label>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[
+                  { label: t.fullMeterFare || '0% (Full)', pct: 0 },
+                  { label: '-10%', pct: 10 },
+                  { label: '-15%', pct: 15 },
+                  { label: '-20%', pct: 20 },
+                ].map((item) => (
+                  <button
+                    key={item.pct}
+                    type="button"
+                    onClick={() => handleDiscountSelect(item.pct)}
+                    className={`text-xs py-2 px-1 rounded-xl border font-mono font-bold transition-all text-center active:scale-95 ${
+                      discountPct === item.pct
+                        ? 'bg-sky-500/20 border-sky-500 text-sky-300 shadow-sm'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Two Bidirectional Inputs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+              {/* 1. Custom Quoted Fare (LKR) */}
+              <div>
+                <label className="text-[11px] font-semibold text-slate-300 flex items-center justify-between mb-1">
+                  <span>{t.customQuotedFare}</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="50"
+                    min="0"
+                    value={customFare}
+                    onChange={(e) => handleCustomFareChange(e.target.value)}
+                    placeholder={String(Math.round(standardMeterFare))}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-600 font-mono text-sm font-bold focus:border-sky-500 focus:ring-1 focus:ring-sky-500/50 outline-none transition-all"
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-500">
+                    LKR
+                  </span>
+                </div>
+              </div>
+
+              {/* 2. Reverse Target Profit Input */}
+              <div>
+                <label className="text-[11px] font-semibold text-slate-300 flex items-center justify-between mb-1">
+                  <span>{t.orDesiredProfit}</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="50"
+                    min="0"
+                    value={desiredProfit}
+                    onChange={(e) => handleDesiredProfitChange(e.target.value)}
+                    placeholder="e.g. 1500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-600 font-mono text-sm font-bold focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 outline-none transition-all"
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-500">
+                    LKR
+                  </span>
+                </div>
+                <p className="text-[9px] text-slate-500 mt-1 truncate">
+                  {t.desiredProfitHint}
+                </p>
+              </div>
+            </div>
+
+            {/* Live Profit Safety Check Card */}
+            <div className="bg-slate-950/80 rounded-xl p-3 border border-slate-800/80 space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-400">{t.finalQuotedFare}</span>
+                <span className="font-mono font-bold text-slate-100 text-sm">
+                  {formatLKR(activeQuotedFare)}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-400">{t.breakEvenCost}</span>
+                <span className="font-mono text-rose-400">
+                  -{formatLKR(tripDetails.totalRunningCost)}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center text-xs pt-1.5 border-t border-slate-800/80">
+                <span className="text-slate-300 font-semibold">{t.remainingNetProfit}</span>
+                <span className={`font-mono font-black text-lg ${
+                  quoteNetProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                }`}>
+                  {quoteNetProfit >= 0 ? '+' : ''}{formatLKR(quoteNetProfit)}
+                </span>
+              </div>
+
+              {/* Discount / Rate comparison vs Standard Meter */}
+              <div className="flex justify-between items-center text-[11px] font-mono pt-1 text-slate-400 border-t border-slate-800/40">
+                <span>{quoteDiscountVsMeter >= 0 ? t.discountVsMeter : t.aboveMeter}:</span>
+                <span className={`font-bold ${
+                  quoteDiscountVsMeter > 0
+                    ? 'text-amber-400'
+                    : quoteDiscountVsMeter < 0
+                    ? 'text-sky-400'
+                    : 'text-slate-400'
+                }`}>
+                  {quoteDiscountVsMeter >= 0
+                    ? `-${quoteDiscountVsMeter.toFixed(1)}%`
+                    : `+${Math.abs(quoteDiscountVsMeter).toFixed(1)}%`}
+                </span>
+              </div>
+            </div>
+
+            {/* Status Alert Banner */}
+            {quoteNetProfit < 0 ? (
+              <div className="mt-2.5 text-[11px] font-semibold text-rose-300 bg-rose-500/15 border border-rose-500/30 rounded-xl p-2.5 flex items-center gap-2 animate-fade-in">
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>{t.customQuoteLossAlert}</span>
+              </div>
+            ) : quoteNetProfit < tripDetails.totalRunningCost * 0.2 ? (
+              <div className="mt-2.5 text-[11px] font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 rounded-xl p-2.5 flex items-center gap-2 animate-fade-in">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>{t.customQuoteLowAlert}</span>
+              </div>
+            ) : (
+              <div className="mt-2.5 text-[11px] font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2.5 flex items-center gap-2 animate-fade-in">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{t.customQuoteHealthyAlert}</span>
+              </div>
+            )}
           </div>
         </div>
       ) : (

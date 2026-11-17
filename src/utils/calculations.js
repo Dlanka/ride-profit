@@ -394,9 +394,10 @@ export function calcMeterFare(distance, firstKmFare = 100, secondKmRate = 85) {
  * @param {number} params.distance - One-way trip distance (km)
  * @param {boolean} params.isReturnTrip - Whether vehicle travels return journey (2x distance)
  * @param {object} params.settings - Vehicle & meter settings
+ * @param {number} [params.waitingMinutes] - Total waiting time in minutes
  * @returns {object} Breakdown of trip costs and meter earnings
  */
-export function calcTripCostDetails({ distance, isReturnTrip, settings }) {
+export function calcTripCostDetails({ distance, isReturnTrip, settings, waitingMinutes = 0 }) {
   const d = Math.max(0, parseFloat(distance) || 0);
   const {
     petrolPrice = 320,
@@ -404,7 +405,16 @@ export function calcTripCostDetails({ distance, isReturnTrip, settings }) {
     maintenancePerKm = 4.5,
     firstKmFare = 100,
     secondKmRate = 85,
+    waitingRatePerMin,
+    vehicleType,
   } = settings;
+
+  const defaultWaitRate = vehicleType === 'threeWheeler' ? 5 : 4;
+  const waitRate = waitingRatePerMin !== undefined && waitingRatePerMin !== null && !isNaN(waitingRatePerMin)
+    ? parseFloat(waitingRatePerMin)
+    : defaultWaitRate;
+  const waitMins = Math.max(0, parseFloat(waitingMinutes) || 0);
+  const totalWaitingCharge = waitMins * waitRate;
 
   const effectiveDistance = isReturnTrip ? d * 2 : d;
   const fuelCostPerKm = calcFuelCostPerKm(petrolPrice, kmPerLiter);
@@ -413,11 +423,12 @@ export function calcTripCostDetails({ distance, isReturnTrip, settings }) {
   const totalMaintenanceCost = (maintenancePerKm || 0) * effectiveDistance;
   const totalRunningCost = totalFuelCost + totalMaintenanceCost;
 
-  // Single-way standard meter fare
-  const oneWayMeterFare = calcMeterFare(d, firstKmFare, secondKmRate);
-  const roundTripMeterFare = oneWayMeterFare * 2;
+  // Single-way standard meter fare (distance fare + waiting charge)
+  const baseOneWayMeterFare = calcMeterFare(d, firstKmFare, secondKmRate);
+  const oneWayMeterFare = baseOneWayMeterFare + totalWaitingCharge;
+  const roundTripMeterFare = (baseOneWayMeterFare * 2) + totalWaitingCharge;
 
-  // One-way scenario (1x distance & 1x running cost)
+  // One-way scenario (1x distance & 1x running cost, 100% waiting adds to profit)
   const oneWayNetProfit = oneWayMeterFare - totalRunningCost;
   const oneWayProfitMargin = oneWayMeterFare > 0 ? (oneWayNetProfit / oneWayMeterFare) * 100 : 0;
 
@@ -437,6 +448,10 @@ export function calcTripCostDetails({ distance, isReturnTrip, settings }) {
     totalFuelCost,
     totalMaintenanceCost,
     totalRunningCost,
+    baseOneWayMeterFare,
+    waitingMinutes: waitMins,
+    waitingRatePerMin: waitRate,
+    totalWaitingCharge,
     oneWayMeterFare,
     roundTripMeterFare,
     oneWayNetProfit,
@@ -461,6 +476,7 @@ export const PRESETS = {
     dailyTarget: 0,
     firstKmFare: 75,
     secondKmRate: 55,
+    waitingRatePerMin: 4,
     defaultCommission: 16,
     defaultDeduction: 0,
     serviceInterval: 2500,
@@ -474,6 +490,7 @@ export const PRESETS = {
     dailyTarget: 0,
     firstKmFare: 100,
     secondKmRate: 85,
+    waitingRatePerMin: 5,
     defaultCommission: 16,
     defaultDeduction: 0,
     serviceInterval: 3000,
@@ -483,6 +500,7 @@ export const PRESETS = {
 
 export const DEFAULT_SETTINGS = {
   ...PRESETS.motorbike,
+  waitingRatePerMin: 4,
   defaultCommission: 16,
   defaultDeduction: 0,
   serviceInterval: 2500,
