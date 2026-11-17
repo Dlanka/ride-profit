@@ -2,17 +2,30 @@ import { useState, useMemo } from 'react';
 import {
   Zap, Banknote, MapPin, Route, Percent, DollarSign,
   ToggleLeft, ToggleRight, CheckCircle2, XCircle,
-  AlertTriangle, RotateCcw, ArrowRight, Sparkles, Fuel, Wrench
+  AlertTriangle, RotateCcw, ArrowRight, Sparkles, Fuel, Wrench,
+  Table, ChevronDown, ChevronUp
 } from 'lucide-react';
-import { evaluateHire, formatLKR } from '../utils/calculations';
+import { evaluateHire, formatLKR, calcTotalCostPerKm } from '../utils/calculations';
 
 export default function HireCheckTab({ t, settings }) {
   const [fare, setFare] = useState('');
   const [pickupDist, setPickupDist] = useState('');
   const [tripDist, setTripDist] = useState('');
-  const [commission, setCommission] = useState('15');
+  const [commission, setCommission] = useState('16');
   const [totalDeduction, setTotalDeduction] = useState('11');
   const [emptyReturn, setEmptyReturn] = useState(false);
+  const [showCheatSheet, setShowCheatSheet] = useState(() => {
+    const saved = localStorage.getItem('rideprofit_show_cheatsheet');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  const toggleCheatSheet = () => {
+    setShowCheatSheet((prev) => {
+      const next = !prev;
+      localStorage.setItem('rideprofit_show_cheatsheet', String(next));
+      return next;
+    });
+  };
 
   // Live real-time calculation whenever inputs change
   const evaluation = useMemo(() => {
@@ -27,11 +40,51 @@ export default function HireCheckTab({ t, settings }) {
     return evaluateHire(f, p, td, c, emptyReturn, settings, ded);
   }, [fare, pickupDist, tripDist, commission, totalDeduction, emptyReturn, settings]);
 
+  // Dynamic calculation for Quick Fare Cheat-Sheet table
+  const cheatSheetData = useMemo(() => {
+    const distances = [2, 5, 8, 10, 15, 20, 30];
+    const { petrolPrice, kmPerLiter, maintenancePerKm, vehicleType } = settings;
+    const runningCostPerKm = calcTotalCostPerKm(petrolPrice, kmPerLiter, maintenancePerKm);
+
+    // Target profit margin: >= 25 LKR/km for motorbike, >= 35 LKR/km for three-wheeler or custom
+    const isBike = vehicleType === 'motorbike';
+    const marginPerKm = isBike ? 25 : 35;
+
+    // Active commission rate and deduction
+    const commRate = commission !== '' && !isNaN(parseFloat(commission)) ? Math.max(0, parseFloat(commission)) : 16;
+    const ded = parseFloat(totalDeduction) || 0;
+    const commDivisor = commRate < 100 ? (1 - commRate / 100) : 1;
+
+    const rows = distances.map((dist) => {
+      // 1x trip: running cost for dist + target profit for dist
+      const netNeededOneWay = (runningCostPerKm * dist) + (marginPerKm * dist);
+      const minGrossOneWay = (netNeededOneWay + ded) / commDivisor;
+
+      // 2x trip: running cost for 2x dist (empty return) + target profit for dist
+      const netNeededReturn = (runningCostPerKm * (dist * 2)) + (marginPerKm * dist);
+      const minGrossReturn = (netNeededReturn + ded) / commDivisor;
+
+      return {
+        dist,
+        oneWay: Math.round(minGrossOneWay),
+        emptyReturn: Math.round(minGrossReturn),
+      };
+    });
+
+    return {
+      runningCostPerKm,
+      marginPerKm,
+      commRate,
+      isBike,
+      rows,
+    };
+  }, [settings, commission, totalDeduction]);
+
   const handleClear = () => {
     setFare('');
     setPickupDist('');
     setTripDist('');
-    setCommission('15');
+    setCommission('16');
     setTotalDeduction('11');
     setEmptyReturn(false);
   };
@@ -53,7 +106,7 @@ export default function HireCheckTab({ t, settings }) {
             <p className="text-[11px] text-slate-400">{t.hireCheckDesc}</p>
           </div>
         </div>
-        {(fare || tripDist || pickupDist || emptyReturn || totalDeduction !== '11' || commission !== '15') && (
+        {(fare || tripDist || pickupDist || emptyReturn || totalDeduction !== '11' || commission !== '16') && (
           <button
             type="button"
             onClick={handleClear}
@@ -151,7 +204,7 @@ export default function HireCheckTab({ t, settings }) {
                 step="1"
                 value={commission}
                 onChange={(e) => setCommission(e.target.value)}
-                placeholder="15"
+                placeholder="16"
                 className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-slate-100 placeholder-slate-600 font-mono text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all"
               />
               <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
@@ -160,7 +213,7 @@ export default function HireCheckTab({ t, settings }) {
             </div>
             {/* Quick Commission Presets */}
             <div className="flex items-center gap-1 mt-1.5">
-              {[0, 10, 15, 20].map((rate) => (
+              {[0, 10, 15, 16, 20].map((rate) => (
                 <button
                   key={rate}
                   type="button"
@@ -359,6 +412,95 @@ export default function HireCheckTab({ t, settings }) {
           </div>
         </div>
       )}
+
+      {/* Quick Fare Cheat-Sheet Card (Collapsible) */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden shadow-lg shadow-black/20">
+        {/* Card Header (Collapsible Trigger) */}
+        <button
+          type="button"
+          onClick={toggleCheatSheet}
+          className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-800/40 active:bg-slate-800/60 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+              <Table className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-white leading-tight">{t.cheatSheetTitle}</h3>
+                <span className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700/60 px-1.5 py-0.5 rounded font-mono">
+                  2 - 30 km
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5">{t.cheatSheetSubtitle}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 text-slate-400">
+            {showCheatSheet ? (
+              <ChevronUp className="w-5 h-5 text-slate-400" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-slate-400" />
+            )}
+          </div>
+        </button>
+
+        {/* Collapsible Content */}
+        {showCheatSheet && (
+          <div className="px-4 pb-4 space-y-3 border-t border-slate-800/80 pt-3 animate-fade-in">
+            {/* Live Assumptions Chips */}
+            <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-slate-400 bg-slate-950/60 p-2 rounded-xl border border-slate-800/60">
+              <span className="text-slate-300">
+                {t.cheatRunningCost}: <span className="font-bold text-slate-200">{formatLKR(cheatSheetData.runningCostPerKm)}/km</span>
+              </span>
+              <span className="text-slate-600">•</span>
+              <span className="text-slate-300">
+                {t.commission}: <span className="font-bold text-purple-400">{cheatSheetData.commRate}%</span>
+              </span>
+              <span className="text-slate-600">•</span>
+              <span className="text-slate-300">
+                {t.cheatTargetMargin}: <span className="font-bold text-emerald-400">+{cheatSheetData.marginPerKm}/km</span> ({cheatSheetData.isBike ? t.motorbike : t.threeWheeler})
+              </span>
+            </div>
+
+            {/* 3-Column Table */}
+            <div className="overflow-hidden rounded-xl border border-slate-800">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-slate-950/90 text-slate-400 border-b border-slate-800 text-[11px]">
+                    <th className="py-2.5 px-3 text-left font-bold">{t.cheatColDistance}</th>
+                    <th className="py-2.5 px-3 text-right font-bold text-slate-300">{t.cheatColOneWay}</th>
+                    <th className="py-2.5 px-3 text-right font-bold text-amber-400">{t.cheatColEmptyReturn}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cheatSheetData.rows.map((row) => (
+                    <tr
+                      key={row.dist}
+                      className="border-b border-slate-800/50 odd:bg-slate-950/40 hover:bg-slate-800/30 transition-colors"
+                    >
+                      <td className="py-2.5 px-3 font-mono font-bold text-slate-200">
+                        {row.dist} km
+                      </td>
+                      <td className="py-2.5 px-3 font-mono font-bold text-right text-emerald-400">
+                        LKR {row.oneWay.toLocaleString()}
+                      </td>
+                      <td className="py-2.5 px-3 font-mono font-extrabold text-right text-amber-400 bg-amber-500/5">
+                        LKR {row.emptyReturn.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Helper Note below table */}
+            <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800/80 flex items-start gap-2.5 text-[11px] text-slate-400 leading-relaxed">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <span>{t.cheatSheetNote}</span>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

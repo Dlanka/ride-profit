@@ -125,6 +125,16 @@ const translations = {
     hireCheckPlaceholderTitle: 'Instant Ride Decision',
     hireCheckPlaceholderDesc: 'Type Offered Fare and Trip Distance above to instantly see if this hire is profitable.',
     
+    // Quick Fare Cheat-Sheet
+    cheatSheetTitle: 'Quick Fare Cheat-Sheet',
+    cheatSheetSubtitle: 'Minimum fares to make a profit without typing',
+    cheatColDistance: 'Trip Dist',
+    cheatColOneWay: 'Min Fare (1x)',
+    cheatColEmptyReturn: 'Empty Return (2x)',
+    cheatSheetNote: 'If the offered PickMe/Uber fare is below these amounts, consider rejecting unless heading that way.',
+    cheatTargetMargin: 'Target Profit',
+    cheatRunningCost: 'Running Cost',
+    
     // Trip Cost Tab
     tripCostTitle: 'Trip Cost & Meter Fare',
     tripCostSubtitle: 'Calculate vehicle running costs & meter earnings',
@@ -323,6 +333,16 @@ const translations = {
     earningsAfterCommission: 'කොමිස් කැපුණු පසු මුදල',
     hireCheckPlaceholderTitle: 'ක්ෂණික තීරණයක් ගන්න',
     hireCheckPlaceholderDesc: 'ඉහතින් ගාස්තුව සහ දුර ඇතුළත් කළ වහාම මෙම හයර් එක ලාභද පාඩුද යන්න මෙහි පෙන්වනු ඇත.',
+    
+    // Quick Fare Cheat-Sheet
+    cheatSheetTitle: 'ක්ෂණික ගාස්තු වගුව',
+    cheatSheetSubtitle: 'ගණනය නොකර බලාගත හැකි අවම ලාභදායී ගාස්තු',
+    cheatColDistance: 'ගමන් දුර',
+    cheatColOneWay: 'අවම ගාස්තුව (1x)',
+    cheatColEmptyReturn: 'හිස් ආපසු (2x)',
+    cheatSheetNote: 'ලැබෙන PickMe/Uber ගාස්තුව මෙම අගයන්ට වඩා අඩු නම්, එම ප්‍රදේශයට වෙනත් ගමනක් නොමැති නම් Reject කිරීම වඩාත් සුදුසුය.',
+    cheatTargetMargin: 'ඉලක්ක ලාභය',
+    cheatRunningCost: 'ධාවන වියදම',
     
     // Trip Cost Tab
     tripCostTitle: 'ගමන් වියදම් සහ මීටර් ගාස්තුව',
