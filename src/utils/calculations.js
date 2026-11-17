@@ -48,6 +48,7 @@ export function calcHireProfit({
   hireType = 'app',
   isGross = false,
   commissionRate,
+  paymentMethod = 'cash',
 }) {
   const { petrolPrice, kmPerLiter, maintenancePerKm } = settings;
   const effectiveCommission = commissionRate !== undefined ? commissionRate : (settings?.defaultCommission ?? 16);
@@ -72,7 +73,7 @@ export function calcHireProfit({
 
   return {
     earnings: netEarnings,
-    grossFare: isGross ? earnings : (hireType === 'app' ? netEarnings / (1 - commissionRate / 100) : netEarnings),
+    grossFare: isGross ? earnings : (hireType === 'app' ? netEarnings / (1 - effectiveCommission / 100) : netEarnings),
     commissionAmount,
     tripDistance,
     effectiveDistance,
@@ -82,6 +83,7 @@ export function calcHireProfit({
     netProfit,
     isRoundTrip,
     hireType,
+    paymentMethod,
   };
 }
 
@@ -190,21 +192,28 @@ export function aggregateHires(hires) {
       totalNetProfit: 0,
       totalDistance: 0,
       totalEffectiveDistance: 0,
+      totalCashEarnings: 0,
+      totalCardEarnings: 0,
       hireCount: 0,
     };
   }
 
   return hires.reduce(
-    (acc, hire) => ({
-      totalEarnings: acc.totalEarnings + (hire.earnings || 0),
-      totalFuelCost: acc.totalFuelCost + (hire.fuelCost || 0),
-      totalMaintenanceCost: acc.totalMaintenanceCost + (hire.maintenanceCost || 0),
-      totalCost: acc.totalCost + (hire.totalCost || 0),
-      totalNetProfit: acc.totalNetProfit + (hire.netProfit || 0),
-      totalDistance: acc.totalDistance + (hire.tripDistance || 0),
-      totalEffectiveDistance: acc.totalEffectiveDistance + (hire.effectiveDistance || 0),
-      hireCount: acc.hireCount + 1,
-    }),
+    (acc, hire) => {
+      const isCard = hire.paymentMethod === 'card';
+      return {
+        totalEarnings: acc.totalEarnings + (hire.earnings || 0),
+        totalFuelCost: acc.totalFuelCost + (hire.fuelCost || 0),
+        totalMaintenanceCost: acc.totalMaintenanceCost + (hire.maintenanceCost || 0),
+        totalCost: acc.totalCost + (hire.totalCost || 0),
+        totalNetProfit: acc.totalNetProfit + (hire.netProfit || 0),
+        totalDistance: acc.totalDistance + (hire.tripDistance || 0),
+        totalEffectiveDistance: acc.totalEffectiveDistance + (hire.effectiveDistance || 0),
+        totalCashEarnings: acc.totalCashEarnings + (isCard ? 0 : (hire.earnings || 0)),
+        totalCardEarnings: acc.totalCardEarnings + (isCard ? (hire.earnings || 0) : 0),
+        hireCount: acc.hireCount + 1,
+      };
+    },
     {
       totalEarnings: 0,
       totalFuelCost: 0,
@@ -213,6 +222,8 @@ export function aggregateHires(hires) {
       totalNetProfit: 0,
       totalDistance: 0,
       totalEffectiveDistance: 0,
+      totalCashEarnings: 0,
+      totalCardEarnings: 0,
       hireCount: 0,
     }
   );
@@ -313,6 +324,7 @@ export function getMonthlySummary() {
   let monthlyNetProfit = 0;
   let monthlyDistance = 0;
   let monthlyTrips = 0;
+  let monthlyMaintenanceCost = 0;
   let daysTracked = 0;
 
   const dates = getTrackedDates();
@@ -328,6 +340,7 @@ export function getMonthlySummary() {
             monthlyNetProfit += sum.totalNetProfit;
             monthlyDistance += sum.totalEffectiveDistance;
             monthlyTrips += sum.hireCount;
+            monthlyMaintenanceCost += sum.totalMaintenanceCost;
             daysTracked += 1;
             return;
           }
@@ -339,6 +352,7 @@ export function getMonthlySummary() {
           monthlyEarnings += bulk.grossEarnings || 0;
           monthlyNetProfit += bulk.netProfit || 0;
           monthlyDistance += bulk.odometerDistance || 0;
+          monthlyMaintenanceCost += bulk.maintenanceCost || 0;
           daysTracked += 1;
         }
       } catch (e) {
@@ -352,6 +366,7 @@ export function getMonthlySummary() {
     monthlyNetProfit,
     monthlyDistance,
     monthlyTrips,
+    monthlyMaintenanceCost,
     daysTracked,
     currentMonthLabel: now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
   };
@@ -448,6 +463,8 @@ export const PRESETS = {
     secondKmRate: 55,
     defaultCommission: 16,
     defaultDeduction: 0,
+    serviceInterval: 2500,
+    kmSinceService: 0,
   },
   threeWheeler: {
     vehicleType: 'threeWheeler',
@@ -459,6 +476,8 @@ export const PRESETS = {
     secondKmRate: 85,
     defaultCommission: 16,
     defaultDeduction: 0,
+    serviceInterval: 3000,
+    kmSinceService: 0,
   },
 };
 
@@ -466,4 +485,134 @@ export const DEFAULT_SETTINGS = {
   ...PRESETS.motorbike,
   defaultCommission: 16,
   defaultDeduction: 0,
+  serviceInterval: 2500,
+  kmSinceService: 0,
 };
+
+/**
+ * Export all logged trips across all dates to CSV format
+ * @returns {string} CSV content
+ */
+export function exportAllDataToCSV() {
+  const headers = [
+    'Date',
+    'Time',
+    'Category',
+    'Payment Method',
+    'Trip Distance (km)',
+    'Effective Distance (km)',
+    'Earnings (LKR)',
+    'Fuel Cost (LKR)',
+    'Maintenance Cost (LKR)',
+    'Total Cost (LKR)',
+    'Net Profit (LKR)',
+  ];
+
+  const rows = [];
+  const dates = getTrackedDates();
+
+  dates.forEach((dateStr) => {
+    try {
+      const hiresRaw = localStorage.getItem(HIRES_KEY_PREFIX + dateStr);
+      if (hiresRaw) {
+        const hires = JSON.parse(hiresRaw);
+        if (Array.isArray(hires)) {
+          hires.forEach((hire) => {
+            rows.push([
+              dateStr,
+              hire.time || '',
+              hire.hireType === 'road' ? 'Road Pickup' : 'App Hire',
+              hire.paymentMethod === 'card' ? 'Card / Wallet' : 'Cash',
+              (hire.tripDistance || 0).toFixed(1),
+              (hire.effectiveDistance || hire.tripDistance || 0).toFixed(1),
+              (hire.earnings || 0).toFixed(2),
+              (hire.fuelCost || 0).toFixed(2),
+              (hire.maintenanceCost || 0).toFixed(2),
+              (hire.totalCost || 0).toFixed(2),
+              (hire.netProfit || 0).toFixed(2),
+            ]);
+          });
+        }
+      }
+
+      // Also check if bulk was recorded for this day
+      const bulkRaw = localStorage.getItem(BULK_KEY_PREFIX + dateStr);
+      if (bulkRaw) {
+        const bulk = JSON.parse(bulkRaw);
+        rows.push([
+          dateStr,
+          'EOD Bulk',
+          'End-of-Day Bulk',
+          'Mixed',
+          (bulk.odometerDistance || 0).toFixed(1),
+          (bulk.odometerDistance || 0).toFixed(1),
+          (bulk.grossEarnings || 0).toFixed(2),
+          (bulk.fuelCost || 0).toFixed(2),
+          (bulk.maintenanceCost || 0).toFixed(2),
+          (bulk.totalCost || 0).toFixed(2),
+          (bulk.netProfit || 0).toFixed(2),
+        ]);
+      }
+    } catch (e) {
+      console.error('Error exporting date to CSV:', dateStr, e);
+    }
+  });
+
+  const csvContent = '\uFEFF' + [
+    headers.join(','),
+    ...rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
+  ].join('\n');
+
+  return csvContent;
+}
+
+/**
+ * Export complete backup of all RideProfit LK localStorage keys as JSON
+ * @returns {object} Full backup object
+ */
+export function exportFullBackupJSON() {
+  const backup = {
+    app: 'RideProfit LK',
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    data: {},
+  };
+
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('rideprofit_') || key.startsWith('rideprofit_hires_') || key.startsWith('rideprofit_bulk_') || key.startsWith('rideprofit_shift_'))) {
+        backup.data[key] = localStorage.getItem(key);
+      }
+    }
+  } catch (e) {
+    console.error('Failed to export backup:', e);
+  }
+
+  return backup;
+}
+
+/**
+ * Restore complete backup into localStorage
+ * @param {string|object} backupData - Parsed JSON object or JSON string
+ * @returns {boolean} Success status
+ */
+export function restoreFullBackupJSON(backupData) {
+  try {
+    const parsed = typeof backupData === 'string' ? JSON.parse(backupData) : backupData;
+    if (!parsed || !parsed.data || typeof parsed.data !== 'object') {
+      throw new Error('Invalid backup data format');
+    }
+
+    Object.entries(parsed.data).forEach(([key, val]) => {
+      if (key.startsWith('rideprofit_')) {
+        localStorage.setItem(key, val);
+      }
+    });
+
+    return true;
+  } catch (e) {
+    console.error('Failed to restore backup:', e);
+    return false;
+  }
+}

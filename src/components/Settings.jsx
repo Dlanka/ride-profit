@@ -1,9 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Settings as SettingsIcon, Bike, Car, Wrench, Save, RotateCcw,
-  Fuel, DollarSign, Target, CheckCircle2, Sparkles, Gauge, Percent
+  Fuel, DollarSign, Target, CheckCircle2, Sparkles, Gauge, Percent,
+  Download, Upload, FileSpreadsheet, Database, RefreshCw
 } from 'lucide-react';
-import { calcFuelCostPerKm, calcTotalCostPerKm, PRESETS, DEFAULT_SETTINGS } from '../utils/calculations';
+import {
+  calcFuelCostPerKm,
+  calcTotalCostPerKm,
+  PRESETS,
+  DEFAULT_SETTINGS,
+  exportAllDataToCSV,
+  exportFullBackupJSON,
+  restoreFullBackupJSON
+} from '../utils/calculations';
 
 const STORAGE_KEY = 'rideprofit_settings_v1';
 
@@ -19,6 +28,8 @@ export function loadSettings() {
         secondKmRate: isThreeWheeler ? 85 : 55,
         defaultCommission: 16,
         defaultDeduction: 0,
+        serviceInterval: isThreeWheeler ? 3000 : 2500,
+        kmSinceService: 0,
         ...parsed,
       };
     }
@@ -39,6 +50,7 @@ export function saveSettings(settings) {
 export default function SettingsTab({ t, settings, setSettings }) {
   const [localSettings, setLocalSettings] = useState({ ...settings });
   const [toastMessage, setToastMessage] = useState('');
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     setLocalSettings({ ...settings });
@@ -66,6 +78,8 @@ export default function SettingsTab({ t, settings, setSettings }) {
         secondKmRate: preset.secondKmRate,
         defaultCommission: localSettings.defaultCommission ?? 16,
         defaultDeduction: localSettings.defaultDeduction ?? 0,
+        serviceInterval: preset.serviceInterval || localSettings.serviceInterval || 2500,
+        kmSinceService: localSettings.kmSinceService ?? 0,
       };
       setLocalSettings(updated);
       showToast(`${t[type] || type} Preset Applied`);
@@ -93,6 +107,70 @@ export default function SettingsTab({ t, settings, setSettings }) {
       ...prev,
       [field]: value,
     }));
+  };
+
+  const handleExportCsv = () => {
+    try {
+      const csv = exportAllDataToCSV();
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `rideprofit_trips_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast(t.csvExported);
+    } catch (e) {
+      console.error(e);
+      showToast('Export failed');
+    }
+  };
+
+  const handleBackupJson = () => {
+    try {
+      const backup = exportFullBackupJSON();
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `rideprofit_backup_${new Date().toISOString().slice(0, 10)}.json`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast(t.dataBackupDownloaded);
+    } catch (e) {
+      console.error(e);
+      showToast('Backup failed');
+    }
+  };
+
+  const handleFileRestore = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result;
+        const success = restoreFullBackupJSON(content);
+        if (success) {
+          const reloaded = loadSettings();
+          setLocalSettings(reloaded);
+          setSettings(reloaded);
+          showToast(t.dataRestored);
+        } else {
+          showToast(t.invalidBackupFile);
+        }
+      } catch (err) {
+        console.error(err);
+        showToast(t.invalidBackupFile);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   return (
@@ -393,6 +471,139 @@ export default function SettingsTab({ t, settings, setSettings }) {
               {t.defaultPassengerDeductionHint}
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Service & Oil Change Tracker */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-lg shadow-black/20">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center">
+            <Wrench className="w-4 h-4 text-sky-400" />
+          </div>
+          <div>
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider leading-tight">
+              {t.serviceSettingsTitle}
+            </h3>
+            <p className="text-[10px] text-slate-400">{t.serviceSettingsSub}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {/* Service Interval */}
+          <div>
+            <label className="text-xs font-semibold text-slate-300 flex items-center gap-1 mb-1.5 h-5">
+              <span className="truncate">{t.serviceInterval}</span>
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                step="100"
+                value={localSettings.serviceInterval ?? ''}
+                onChange={(e) => updateField('serviceInterval', parseFloat(e.target.value) || 0)}
+                className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-500 font-medium text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500/50 outline-none transition-all font-mono"
+                placeholder={localSettings.vehicleType === 'threeWheeler' ? '3000' : '2500'}
+              />
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
+                km
+              </span>
+            </div>
+            <p className="text-[9px] text-slate-500 mt-1 truncate">
+              {t.serviceIntervalHint}
+            </p>
+          </div>
+
+          {/* KM Driven Since Last Service */}
+          <div>
+            <label className="text-xs font-semibold text-slate-300 flex items-center gap-1 mb-1.5 h-5">
+              <span className="truncate">{t.kmSinceLastService}</span>
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                step="10"
+                value={localSettings.kmSinceService ?? ''}
+                onChange={(e) => updateField('kmSinceService', parseFloat(e.target.value) || 0)}
+                className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-500 font-medium text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500/50 outline-none transition-all font-mono"
+                placeholder="0"
+              />
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
+                km
+              </span>
+            </div>
+            <p className="text-[9px] text-slate-500 mt-1 truncate">
+              Auto-increments on rides
+            </p>
+          </div>
+        </div>
+
+        {/* Reset Service Counter Button */}
+        <button
+          type="button"
+          onClick={() => {
+            const updated = { ...localSettings, kmSinceService: 0 };
+            setLocalSettings(updated);
+            saveSettings(updated);
+            setSettings(updated);
+            showToast(t.serviceCounterReset);
+          }}
+          className="w-full flex items-center justify-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white font-semibold py-2.5 px-3 rounded-xl transition-all text-xs active:scale-[0.98]"
+        >
+          <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+          <span>{t.resetServiceCounter}</span>
+        </button>
+      </div>
+
+      {/* Data Backup, Restore & Excel/CSV Export */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3.5 shadow-lg shadow-black/20">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+            <Database className="w-4 h-4 text-emerald-400" />
+          </div>
+          <div>
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider leading-tight">
+              {t.backupExportTitle}
+            </h3>
+            <p className="text-[10px] text-slate-400">{t.backupExportSub}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+          {/* Export CSV Button */}
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="flex items-center justify-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-200 py-2.5 px-3 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-sm"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+            <span>{t.btnExportCsv}</span>
+          </button>
+
+          {/* Backup JSON Button */}
+          <button
+            type="button"
+            onClick={handleBackupJson}
+            className="flex items-center justify-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-200 py-2.5 px-3 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-sm"
+          >
+            <Download className="w-4 h-4 text-sky-400" />
+            <span>{t.btnBackupJson}</span>
+          </button>
+
+          {/* Restore JSON Button */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center justify-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-200 py-2.5 px-3 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-sm"
+          >
+            <Upload className="w-4 h-4 text-purple-400" />
+            <span>{t.btnRestoreJson}</span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,application/json"
+            onChange={handleFileRestore}
+            className="hidden"
+          />
         </div>
       </div>
 

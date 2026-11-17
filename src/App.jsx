@@ -76,7 +76,7 @@ function App() {
       {/* Main Content Area with proper padding so titles are never clipped */}
       <main className="flex-1 px-4 pt-20 pb-28 overflow-y-auto">
         {activeTab === 'tracker' && (
-          <TrackerTab t={t} settings={settings} />
+          <TrackerTab t={t} settings={settings} setSettings={setSettings} />
         )}
         {activeTab === 'hireCheck' && (
           <HireCheckTab t={t} settings={settings} />

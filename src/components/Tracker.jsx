@@ -3,13 +3,15 @@ import {
   TrendingUp, Plus, Trash2, RotateCcw, MapPin, Banknote,
   Fuel, Wrench, Route, Target, ToggleLeft, ToggleRight,
   ChevronRight, Calculator, Calendar, History, ChevronDown,
-  ChevronUp, CheckCircle2, AlertCircle, ArrowUpRight, Gauge
+  ChevronUp, CheckCircle2, AlertCircle, ArrowUpRight, Gauge,
+  Clock, CreditCard, Droplet, Shield, AlertTriangle
 } from 'lucide-react';
 import {
   calcHireProfit, calcBulkProfit, aggregateHires, formatLKR,
   getTodayKey, registerDateInIndex, getTrackedDates, getMonthlySummary,
   deleteDateFromHistory, HIRES_KEY_PREFIX, BULK_KEY_PREFIX
 } from '../utils/calculations';
+import { saveSettings } from './Settings';
 
 function loadHiresForDate(dateKey) {
   try {
@@ -30,16 +32,26 @@ function saveHiresForDate(dateKey, hires) {
   }
 }
 
-export default function TrackerTab({ t, settings }) {
+export default function TrackerTab({ t, settings, setSettings }) {
   const [activeDate, setActiveDate] = useState(getTodayKey);
   const [mode, setMode] = useState('individual'); // 'individual' | 'bulk'
   const [hires, setHires] = useState(() => loadHiresForDate(getTodayKey()));
 
   // Sub-mode A: Individual Hire state
   const [hireType, setHireType] = useState('app'); // 'app' | 'road'
+  const [paymentMethod, setPaymentMethod] = useState('cash'); // 'cash' | 'card'
   const [earnings, setEarnings] = useState('');
   const [distance, setDistance] = useState('');
   const [isRoundTrip, setIsRoundTrip] = useState(false);
+
+  // Shift Time state (stored per date)
+  const [shiftHours, setShiftHours] = useState(() => {
+    try {
+      return localStorage.getItem(`rideprofit_shift_${getTodayKey()}`) || '';
+    } catch (e) {
+      return '';
+    }
+  });
 
   // Sub-mode B: Bulk / EOD state
   const [bulkAppEarnings, setBulkAppEarnings] = useState('');
@@ -55,9 +67,14 @@ export default function TrackerTab({ t, settings }) {
   const [toast, setToast] = useState('');
   const [historyVersion, setHistoryVersion] = useState(0);
 
-  // Load hires when activeDate changes
+  // Load hires and shift hours when activeDate changes
   useEffect(() => {
     setHires(loadHiresForDate(activeDate));
+    try {
+      setShiftHours(localStorage.getItem(`rideprofit_shift_${activeDate}`) || '');
+    } catch (e) {
+      setShiftHours('');
+    }
     // Load any bulk saved result for this date
     try {
       const savedBulk = localStorage.getItem(BULK_KEY_PREFIX + activeDate);
@@ -90,6 +107,10 @@ export default function TrackerTab({ t, settings }) {
   const targetRemaining = dailyTarget > 0 ? Math.max(0, dailyTarget - summary.totalNetProfit) : 0;
   const targetExceeded = dailyTarget > 0 && summary.totalNetProfit > dailyTarget ? summary.totalNetProfit - dailyTarget : 0;
 
+  // Shift Hours & Hourly Rate calculation
+  const parsedShiftHours = parseFloat(shiftHours) || 0;
+  const hourlyRate = parsedShiftHours > 0 ? summary.totalNetProfit / parsedShiftHours : 0;
+
   // Monthly summary & Last 7 Days records
   const monthlySummary = useMemo(() => getMonthlySummary(), [hires, bulkResult, historyVersion]);
   const trackedDates = useMemo(() => getTrackedDates(), [hires, activeDate, historyVersion]);
@@ -110,6 +131,24 @@ export default function TrackerTab({ t, settings }) {
       setHistoryVersion((v) => v + 1);
       showToast(t.dayDeleted || 'Day records deleted');
     }
+  };
+
+  // Shift hours helper handlers
+  const handleUpdateShiftHours = (val) => {
+    setShiftHours(val);
+    try {
+      if (val) {
+        localStorage.setItem(`rideprofit_shift_${activeDate}`, val);
+      } else {
+        localStorage.removeItem(`rideprofit_shift_${activeDate}`);
+      }
+    } catch (e) {}
+  };
+
+  const handleAddShiftHours = (delta) => {
+    const current = parseFloat(shiftHours) || 0;
+    const nextVal = Math.max(0, Math.round((current + delta) * 10) / 10);
+    handleUpdateShiftHours(nextVal > 0 ? String(nextVal) : '');
   };
 
   // Calculate live odometer distance if in odometer mode
@@ -139,19 +178,45 @@ export default function TrackerTab({ t, settings }) {
       settings,
       hireType,
       commissionRate: settings?.defaultCommission ?? 16,
+      paymentMethod,
     });
 
     hire.id = Date.now();
     hire.time = new Date().toLocaleTimeString('en-LK', { hour: '2-digit', minute: '2-digit' });
 
     setHires((prev) => [...prev, hire]);
+
+    // Auto-increment KM since service
+    if (setSettings && settings) {
+      const currentKm = parseFloat(settings.kmSinceService) || 0;
+      const addedDist = hire.effectiveDistance || dist;
+      const updated = {
+        ...settings,
+        kmSinceService: Math.round((currentKm + addedDist) * 10) / 10,
+      };
+      setSettings(updated);
+      saveSettings(updated);
+    }
+
     setEarnings('');
     setDistance('');
     setIsRoundTrip(false);
+    setPaymentMethod('cash');
     showToast(t.hireAdded);
   };
 
   const handleDeleteHire = (id) => {
+    const hireToDelete = hires.find((h) => h.id === id);
+    if (hireToDelete && setSettings && settings) {
+      const currentKm = parseFloat(settings.kmSinceService) || 0;
+      const removedDist = hireToDelete.effectiveDistance || 0;
+      const updated = {
+        ...settings,
+        kmSinceService: Math.max(0, Math.round((currentKm - removedDist) * 10) / 10),
+      };
+      setSettings(updated);
+      saveSettings(updated);
+    }
     setHires((prev) => prev.filter((h) => h.id !== id));
   };
 
@@ -235,7 +300,15 @@ export default function TrackerTab({ t, settings }) {
 
         {/* Net Profit Big Display */}
         <div className="my-2">
-          <span className="text-[11px] text-slate-400 font-medium block">{t.netProfit}</span>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-slate-400 font-medium block">{t.netProfit}</span>
+            {parsedShiftHours > 0 && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 animate-fade-in">
+                <Clock className="w-3 h-3 text-emerald-400" />
+                {formatLKR(hourlyRate)}{t.perHour || '/hr'}
+              </span>
+            )}
+          </div>
           <div className={`text-3xl font-black font-mono tracking-tight ${summary.totalNetProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
             {formatLKR(summary.totalNetProfit)}
           </div>
@@ -266,6 +339,27 @@ export default function TrackerTab({ t, settings }) {
             <span className="text-[10px] text-slate-400 block mb-0.5">{t.totalMaintCost}</span>
             <span className="font-mono font-bold text-rose-400">
               -{formatLKR(summary.totalMaintenanceCost)}
+            </span>
+          </div>
+        </div>
+
+        {/* Cash vs Card / Wallet Split */}
+        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80">
+          <div className="bg-slate-950/80 rounded-xl p-2.5 border border-emerald-500/20">
+            <span className="text-[10px] text-slate-400 block mb-0.5 flex items-center gap-1">
+              <span>💵</span> {t.cashInHand || 'Cash in Hand'}
+            </span>
+            <span className="font-mono font-bold text-emerald-400 text-xs sm:text-sm">
+              {formatLKR(mode === 'bulk' && bulkResult ? (parseFloat(bulkResult.cashPickups) || 0) : summary.totalCashEarnings)}
+            </span>
+          </div>
+
+          <div className="bg-slate-950/80 rounded-xl p-2.5 border border-sky-500/20">
+            <span className="text-[10px] text-slate-400 block mb-0.5 flex items-center gap-1">
+              <CreditCard className="w-3 h-3 text-sky-400" /> {t.walletCardEarnings || 'App Wallet / Card'}
+            </span>
+            <span className="font-mono font-bold text-sky-400 text-xs sm:text-sm">
+              {formatLKR(mode === 'bulk' && bulkResult ? (parseFloat(bulkResult.appEarnings) || 0) : summary.totalCardEarnings)}
             </span>
           </div>
         </div>
@@ -313,6 +407,118 @@ export default function TrackerTab({ t, settings }) {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Engine Oil & Service Health Progress Bar */}
+      {(() => {
+        const serviceInterval = parseFloat(settings?.serviceInterval) || 2500;
+        const kmSinceService = parseFloat(settings?.kmSinceService) || 0;
+        const serviceProgress = Math.min(100, Math.max(0, (kmSinceService / serviceInterval) * 100));
+        const kmRemaining = Math.max(0, serviceInterval - kmSinceService);
+        const isOverdue = kmSinceService >= serviceInterval;
+        const isNear = serviceProgress >= 80;
+
+        let barColor = 'bg-gradient-to-r from-emerald-500 to-sky-500';
+        let badgeColor = 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10';
+        if (isOverdue) {
+          barColor = 'bg-rose-500 shadow-sm shadow-rose-500/50';
+          badgeColor = 'text-rose-400 border-rose-500/30 bg-rose-500/10 animate-pulse';
+        } else if (isNear) {
+          barColor = 'bg-amber-500';
+          badgeColor = 'text-amber-400 border-amber-500/30 bg-amber-500/10';
+        }
+
+        return (
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 shadow-md">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-1.5">
+                <Droplet className={`w-3.5 h-3.5 ${isOverdue ? 'text-rose-400' : isNear ? 'text-amber-400' : 'text-emerald-400'}`} />
+                <span className="text-xs font-bold text-slate-300">
+                  {t.oilServiceTracker || 'Oil & Service Health'}
+                </span>
+              </div>
+              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${badgeColor}`}>
+                {isOverdue ? (t.serviceOverdueAlert || 'SERVICE DUE NOW') : `${kmRemaining.toFixed(0)} km left`}
+              </span>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full bg-slate-950 rounded-full h-2 p-0.5 border border-slate-800 overflow-hidden mb-1.5">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                style={{ width: `${serviceProgress}%` }}
+              />
+            </div>
+
+            <div className="flex justify-between items-center text-[10px] font-mono text-slate-400">
+              <span>{kmSinceService.toFixed(0)} km / {serviceInterval} km</span>
+              <span>{Math.round(serviceProgress)}% used</span>
+            </div>
+
+            {isOverdue && (
+              <div className="mt-2 text-[11px] font-semibold text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg p-2 flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                <span>{t.serviceOverdueAlert}</span>
+              </div>
+            )}
+            {!isOverdue && isNear && (
+              <div className="mt-2 text-[11px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg p-2 flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>{t.serviceDueSoonAlert}</span>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Shift Time / Active Hours Input Bar */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 shadow-md flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0">
+            <Clock className="w-3.5 h-3.5 text-sky-400" />
+          </div>
+          <div className="truncate">
+            <span className="text-xs font-bold text-slate-200 block leading-tight truncate">
+              {t.activeHours || 'Active Shift Hours'}
+            </span>
+            <span className="text-[10px] text-slate-500 truncate block">
+              {t.shiftTimeTitle || 'For hourly profit calculation'}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="relative w-16">
+            <input
+              type="number"
+              step="0.5"
+              min="0"
+              max="24"
+              value={shiftHours}
+              onChange={(e) => handleUpdateShiftHours(e.target.value)}
+              placeholder="0.0"
+              className="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2 py-1 text-center font-mono font-bold text-xs text-slate-100 outline-none focus:border-sky-500"
+            />
+          </div>
+          <span className="text-[11px] font-mono text-slate-400">{t.hoursSuffix || 'hrs'}</span>
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => handleAddShiftHours(0.5)}
+              className="px-2 py-1 text-[10px] font-mono font-bold bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-md transition-all border border-slate-700"
+            >
+              +0.5h
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAddShiftHours(1.0)}
+              className="px-2 py-1 text-[10px] font-mono font-bold bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 rounded-md transition-all border border-slate-700"
+            >
+              +1h
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Sub-mode Tab Selector: Individual vs End-of-Day Bulk */}
@@ -375,6 +581,39 @@ export default function TrackerTab({ t, settings }) {
                 >
                   <span>💵</span>
                   <span>{t.typeRoad}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Payment Method Switch: Cash vs Card/Wallet */}
+            <div>
+              <label className="text-xs font-bold text-slate-300 block mb-1.5 uppercase tracking-wider">
+                {t.paymentMethod || 'Payment Method'}
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('cash')}
+                  className={`whitespace-nowrap text-xs sm:text-sm px-2 py-2 flex items-center justify-center gap-1.5 rounded-xl border font-bold transition-all ${
+                    paymentMethod === 'cash'
+                      ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-300'
+                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  <span>💵</span>
+                  <span>{t.payCash || 'Cash'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('card')}
+                  className={`whitespace-nowrap text-xs sm:text-sm px-2 py-2 flex items-center justify-center gap-1.5 rounded-xl border font-bold transition-all ${
+                    paymentMethod === 'card'
+                      ? 'bg-sky-500/15 border-sky-500/50 text-sky-300'
+                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>{t.payCard || 'Card / Wallet'}</span>
                 </button>
               </div>
             </div>
@@ -511,6 +750,13 @@ export default function TrackerTab({ t, settings }) {
                             : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                         }`}>
                           {hire.hireType === 'road' ? 'Road 0%' : 'App'}
+                        </span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full border ${
+                          hire.paymentMethod === 'card'
+                            ? 'bg-sky-500/10 text-sky-400 border-sky-500/30'
+                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                        }`}>
+                          {hire.paymentMethod === 'card' ? `💳 ${t.badgeCard || 'Card'}` : `💵 ${t.badgeCash || 'Cash'}`}
                         </span>
                         {hire.isRoundTrip && (
                           <span className="text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.2 rounded-full">
@@ -755,6 +1001,32 @@ export default function TrackerTab({ t, settings }) {
                   <span className="font-mono font-bold text-slate-200">{monthlySummary.monthlyTrips}</span>
                 </div>
               </div>
+            </div>
+
+            {/* Monthly Maintenance Reserve Fund Highlight Box */}
+            <div className="bg-slate-950/80 border border-amber-500/30 rounded-xl p-3 my-2 text-left shadow-sm">
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Wrench className="w-4 h-4 text-amber-400" />
+                  <span className="text-xs font-bold text-slate-200">
+                    {t.maintenanceReserveTitle || 'Saved Maintenance Reserve Fund'}
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                  {t.maintenanceReserveBadge || 'Reserve Fund'}
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between mt-1">
+                <span className="text-xl font-black font-mono text-amber-400">
+                  {formatLKR(monthlySummary.monthlyMaintenanceCost || 0)}
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {monthlySummary.monthlyDistance.toFixed(0)} km driven
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1 leading-snug">
+                {t.maintenanceReserveSub || 'Estimated funds to set aside for future tyres, oil & repairs'}
+              </p>
             </div>
 
             {/* List of Tracked Dates (Limited to Last 7 Days) */}
