@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Zap, Banknote, MapPin, Route, Percent, DollarSign,
   ToggleLeft, ToggleRight, CheckCircle2, XCircle,
@@ -8,16 +8,37 @@ import {
 import { evaluateHire, formatLKR, calcTotalCostPerKm } from '../utils/calculations';
 
 export default function HireCheckTab({ t, settings }) {
+  const defaultCommission = String(settings?.defaultCommission ?? 16);
+  const defaultDeduction = String(settings?.defaultDeduction ?? 0);
+
   const [fare, setFare] = useState('');
   const [pickupDist, setPickupDist] = useState('');
   const [tripDist, setTripDist] = useState('');
-  const [commission, setCommission] = useState('16');
-  const [totalDeduction, setTotalDeduction] = useState('11');
+  const [commission, setCommission] = useState(defaultCommission);
+  const [totalDeduction, setTotalDeduction] = useState(defaultDeduction);
   const [emptyReturn, setEmptyReturn] = useState(false);
   const [showCheatSheet, setShowCheatSheet] = useState(() => {
     const saved = localStorage.getItem('rideprofit_show_cheatsheet');
     return saved !== null ? saved === 'true' : true;
   });
+
+  // Input refs for smooth mobile Enter / Next key navigation
+  const fareInputRef = useRef(null);
+  const pickupInputRef = useRef(null);
+  const tripInputRef = useRef(null);
+
+  // Sync defaults if updated in Settings tab
+  useEffect(() => {
+    if (settings?.defaultCommission !== undefined) {
+      setCommission(String(settings.defaultCommission));
+    }
+  }, [settings?.defaultCommission]);
+
+  useEffect(() => {
+    if (settings?.defaultDeduction !== undefined) {
+      setTotalDeduction(String(settings.defaultDeduction));
+    }
+  }, [settings?.defaultDeduction]);
 
   const toggleCheatSheet = () => {
     setShowCheatSheet((prev) => {
@@ -51,8 +72,12 @@ export default function HireCheckTab({ t, settings }) {
     const marginPerKm = isBike ? 25 : 35;
 
     // Active commission rate and deduction
-    const commRate = commission !== '' && !isNaN(parseFloat(commission)) ? Math.max(0, parseFloat(commission)) : 16;
-    const ded = parseFloat(totalDeduction) || 0;
+    const commRate = commission !== '' && !isNaN(parseFloat(commission))
+      ? Math.max(0, parseFloat(commission))
+      : (settings?.defaultCommission ?? 16);
+    const ded = totalDeduction !== '' && !isNaN(parseFloat(totalDeduction))
+      ? Math.max(0, parseFloat(totalDeduction))
+      : (settings?.defaultDeduction ?? 0);
     const commDivisor = commRate < 100 ? (1 - commRate / 100) : 1;
 
     const rows = distances.map((dist) => {
@@ -75,6 +100,7 @@ export default function HireCheckTab({ t, settings }) {
       runningCostPerKm,
       marginPerKm,
       commRate,
+      ded,
       isBike,
       rows,
     };
@@ -84,14 +110,24 @@ export default function HireCheckTab({ t, settings }) {
     setFare('');
     setPickupDist('');
     setTripDist('');
-    setCommission('16');
-    setTotalDeduction('11');
+    setCommission(String(settings?.defaultCommission ?? 16));
+    setTotalDeduction(String(settings?.defaultDeduction ?? 0));
     setEmptyReturn(false);
+    fareInputRef.current?.focus();
   };
 
   const setCommissionPreset = (val) => {
     setCommission(String(val));
   };
+
+  const isModified = Boolean(
+    fare ||
+    tripDist ||
+    pickupDist ||
+    emptyReturn ||
+    commission !== defaultCommission ||
+    totalDeduction !== defaultDeduction
+  );
 
   return (
     <div className="space-y-4 pb-4 animate-fade-in">
@@ -106,7 +142,7 @@ export default function HireCheckTab({ t, settings }) {
             <p className="text-[11px] text-slate-400">{t.hireCheckDesc}</p>
           </div>
         </div>
-        {(fare || tripDist || pickupDist || emptyReturn || totalDeduction !== '11' || commission !== '16') && (
+        {isModified && (
           <button
             type="button"
             onClick={handleClear}
@@ -131,10 +167,19 @@ export default function HireCheckTab({ t, settings }) {
           </label>
           <div className="relative">
             <input
+              ref={fareInputRef}
               type="number"
               step="10"
               value={fare}
               onChange={(e) => setFare(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  pickupInputRef.current?.focus();
+                  pickupInputRef.current?.select();
+                }
+              }}
+              enterKeyHint="next"
               placeholder="0"
               autoFocus
               className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-3 text-slate-100 placeholder-slate-600 font-mono text-xl font-bold focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 outline-none transition-all"
@@ -154,10 +199,19 @@ export default function HireCheckTab({ t, settings }) {
             </label>
             <div className="relative">
               <input
+                ref={pickupInputRef}
                 type="number"
                 step="0.5"
                 value={pickupDist}
                 onChange={(e) => setPickupDist(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    tripInputRef.current?.focus();
+                    tripInputRef.current?.select();
+                  }
+                }}
+                enterKeyHint="next"
                 placeholder="0"
                 className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-slate-100 placeholder-slate-600 font-mono text-sm focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50 outline-none transition-all"
               />
@@ -174,10 +228,18 @@ export default function HireCheckTab({ t, settings }) {
             </label>
             <div className="relative">
               <input
+                ref={tripInputRef}
                 type="number"
                 step="0.5"
                 value={tripDist}
                 onChange={(e) => setTripDist(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.target.blur();
+                  }
+                }}
+                enterKeyHint="done"
                 placeholder="0"
                 className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-slate-100 placeholder-slate-600 font-mono text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500/50 outline-none transition-all font-semibold"
               />
@@ -188,7 +250,7 @@ export default function HireCheckTab({ t, settings }) {
           </div>
         </div>
 
-        {/* Deductions: App Commission (%) + Total / Other Deduction (LKR) */}
+        {/* Deductions: App Commission (%) + Passenger Deduction (LKR) */}
         <div className="grid grid-cols-2 gap-2.5">
           {/* App Commission */}
           <div>
@@ -204,7 +266,7 @@ export default function HireCheckTab({ t, settings }) {
                 step="1"
                 value={commission}
                 onChange={(e) => setCommission(e.target.value)}
-                placeholder="16"
+                placeholder={defaultCommission}
                 className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-slate-100 placeholder-slate-600 font-mono text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all"
               />
               <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
@@ -230,21 +292,21 @@ export default function HireCheckTab({ t, settings }) {
             </div>
           </div>
 
-          {/* Total / Other Deduction (LKR) */}
+          {/* Passenger Deduction / Platform Fee (LKR) */}
           <div>
             <div className="flex items-center justify-between mb-1.5 h-5">
               <label className="text-xs font-semibold text-slate-300 flex items-center gap-1 truncate">
                 <DollarSign className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span className="truncate">{t.totalDeduction}</span>
+                <span className="truncate">{t.passengerDeduction || t.totalDeduction}</span>
               </label>
             </div>
             <div className="relative">
               <input
                 type="number"
-                step="10"
+                step="1"
                 value={totalDeduction}
                 onChange={(e) => setTotalDeduction(e.target.value)}
-                placeholder="11"
+                placeholder={defaultDeduction}
                 className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-slate-100 placeholder-slate-600 font-mono text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all font-semibold"
               />
               <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-slate-500">
@@ -252,7 +314,7 @@ export default function HireCheckTab({ t, settings }) {
               </span>
             </div>
             <span className="text-[10px] text-slate-500 block mt-1.5 truncate">
-              {t.totalDeductionSub}
+              {t.passengerDeductionSub || t.totalDeductionSub}
             </span>
           </div>
         </div>
@@ -352,7 +414,7 @@ export default function HireCheckTab({ t, settings }) {
 
               {evaluation.otherDeductions > 0 && (
                 <div className="flex justify-between items-center py-1 border-b border-slate-800/80">
-                  <span className="text-slate-400">{t.totalDeduction}</span>
+                  <span className="text-slate-400">{t.passengerDeduction || t.totalDeduction}</span>
                   <span className="font-mono font-semibold text-rose-400">-{formatLKR(evaluation.otherDeductions)}</span>
                 </div>
               )}
@@ -456,6 +518,14 @@ export default function HireCheckTab({ t, settings }) {
               <span className="text-slate-300">
                 {t.commission}: <span className="font-bold text-purple-400">{cheatSheetData.commRate}%</span>
               </span>
+              {cheatSheetData.ded > 0 && (
+                <>
+                  <span className="text-slate-600">•</span>
+                  <span className="text-slate-300">
+                    {t.passengerDeduction || t.totalDeduction}: <span className="font-bold text-amber-400">LKR {cheatSheetData.ded}</span>
+                  </span>
+                </>
+              )}
               <span className="text-slate-600">•</span>
               <span className="text-slate-300">
                 {t.cheatTargetMargin}: <span className="font-bold text-emerald-400">+{cheatSheetData.marginPerKm}/km</span> ({cheatSheetData.isBike ? t.motorbike : t.threeWheeler})

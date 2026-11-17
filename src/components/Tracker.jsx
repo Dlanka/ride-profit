@@ -138,6 +138,7 @@ export default function TrackerTab({ t, settings }) {
       isRoundTrip,
       settings,
       hireType,
+      commissionRate: settings?.defaultCommission ?? 16,
     });
 
     hire.id = Date.now();

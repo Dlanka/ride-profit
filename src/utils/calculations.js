@@ -47,15 +47,16 @@ export function calcHireProfit({
   settings,
   hireType = 'app',
   isGross = false,
-  commissionRate = 15,
+  commissionRate,
 }) {
   const { petrolPrice, kmPerLiter, maintenancePerKm } = settings;
+  const effectiveCommission = commissionRate !== undefined ? commissionRate : (settings?.defaultCommission ?? 16);
   
   let netEarnings = earnings;
   let commissionAmount = 0;
 
   if (isGross && hireType === 'app') {
-    commissionAmount = earnings * (commissionRate / 100);
+    commissionAmount = earnings * (effectiveCommission / 100);
     netEarnings = earnings - commissionAmount;
   } else if (hireType === 'road') {
     commissionAmount = 0;
@@ -445,6 +446,8 @@ export const PRESETS = {
     dailyTarget: 0,
     firstKmFare: 75,
     secondKmRate: 55,
+    defaultCommission: 16,
+    defaultDeduction: 0,
   },
   threeWheeler: {
     vehicleType: 'threeWheeler',
@@ -454,7 +457,13 @@ export const PRESETS = {
     dailyTarget: 0,
     firstKmFare: 100,
     secondKmRate: 85,
+    defaultCommission: 16,
+    defaultDeduction: 0,
   },
 };
 
-export const DEFAULT_SETTINGS = { ...PRESETS.motorbike };
+export const DEFAULT_SETTINGS = {
+  ...PRESETS.motorbike,
+  defaultCommission: 16,
+  defaultDeduction: 0,
+};

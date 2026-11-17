@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Settings as SettingsIcon, Bike, Car, Wrench, Save, RotateCcw,
-  Fuel, DollarSign, Target, CheckCircle2, Sparkles, Gauge
+  Fuel, DollarSign, Target, CheckCircle2, Sparkles, Gauge, Percent
 } from 'lucide-react';
 import { calcFuelCostPerKm, calcTotalCostPerKm, PRESETS, DEFAULT_SETTINGS } from '../utils/calculations';
 
@@ -17,6 +17,8 @@ export function loadSettings() {
         ...DEFAULT_SETTINGS,
         firstKmFare: isThreeWheeler ? 100 : 75,
         secondKmRate: isThreeWheeler ? 85 : 55,
+        defaultCommission: 16,
+        defaultDeduction: 0,
         ...parsed,
       };
     }
@@ -53,7 +55,18 @@ export default function SettingsTab({ t, settings, setSettings }) {
   const handlePreset = (type) => {
     const preset = PRESETS[type];
     if (preset) {
-      const updated = { ...localSettings, ...preset };
+      const updated = {
+        ...localSettings,
+        vehicleType: preset.vehicleType,
+        kmPerLiter: preset.kmPerLiter,
+        petrolPrice: preset.petrolPrice,
+        maintenancePerKm: preset.maintenancePerKm,
+        dailyTarget: preset.dailyTarget,
+        firstKmFare: preset.firstKmFare,
+        secondKmRate: preset.secondKmRate,
+        defaultCommission: localSettings.defaultCommission ?? 16,
+        defaultDeduction: localSettings.defaultDeduction ?? 0,
+      };
       setLocalSettings(updated);
       showToast(`${t[type] || type} Preset Applied`);
     }
@@ -315,6 +328,69 @@ export default function SettingsTab({ t, settings, setSettings }) {
             </div>
             <p className="text-[9px] text-slate-500 mt-1 truncate">
               {localSettings.vehicleType === 'threeWheeler' ? 'Default: 85 LKR/km' : 'Default: 55 LKR/km'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* App Commission & Platform Fee Configuration */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-lg shadow-black/20">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+            <Percent className="w-4 h-4 text-purple-400" />
+          </div>
+          <div>
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider leading-tight">
+              {t.appFeeSettingsTitle}
+            </h3>
+            <p className="text-[10px] text-slate-400">{t.appFeeSettingsSub}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {/* Default App Commission (%) */}
+          <div>
+            <label className="text-xs font-semibold text-slate-300 flex items-center gap-1 mb-1.5 h-5">
+              <span className="truncate">{t.defaultCommission}</span>
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                step="1"
+                value={localSettings.defaultCommission ?? ''}
+                onChange={(e) => updateField('defaultCommission', parseFloat(e.target.value) || 0)}
+                className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-500 font-medium text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all font-mono"
+                placeholder="16"
+              />
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
+                %
+              </span>
+            </div>
+            <p className="text-[9px] text-slate-500 mt-1 truncate">
+              {t.defaultCommissionHint}
+            </p>
+          </div>
+
+          {/* Default Passenger Deduction / Platform Fee (LKR) */}
+          <div>
+            <label className="text-xs font-semibold text-slate-300 flex items-center gap-1 mb-1.5 h-5">
+              <span className="truncate">{t.defaultPassengerDeduction}</span>
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                step="1"
+                value={localSettings.defaultDeduction ?? ''}
+                onChange={(e) => updateField('defaultDeduction', parseFloat(e.target.value) || 0)}
+                className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-500 font-medium text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all font-mono"
+                placeholder="0"
+              />
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
+                LKR
+              </span>
+            </div>
+            <p className="text-[9px] text-slate-500 mt-1 truncate">
+              {t.defaultPassengerDeductionHint}
             </p>
           </div>
         </div>
