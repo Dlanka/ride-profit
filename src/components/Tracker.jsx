@@ -101,11 +101,32 @@ export default function TrackerTab({ t, settings, setSettings }) {
   // Summary calculation for the active date
   const summary = useMemo(() => aggregateHires(hires), [hires]);
 
-  // Target calculations
+  // Target calculations (Simple Daily vs Monthly Budget Split)
+  const targetMode = settings.targetMode || 'simple';
   const dailyTarget = settings.dailyTarget || 0;
   const targetProgress = dailyTarget > 0 ? (summary.totalNetProfit / dailyTarget) * 100 : 0;
   const targetRemaining = dailyTarget > 0 ? Math.max(0, dailyTarget - summary.totalNetProfit) : 0;
   const targetExceeded = dailyTarget > 0 && summary.totalNetProfit > dailyTarget ? summary.totalNetProfit - dailyTarget : 0;
+
+  // Monthly Budget Split 3-tier calculations
+  const workingDays = Math.max(1, parseFloat(settings.workingDaysPerMonth) || 25);
+  const dailyFixedGoal = (parseFloat(settings.monthlyFixedExpenses) || 0) / workingDays;
+  const dailyFoodGoal = (parseFloat(settings.monthlyFoodExpenses) || 0) / workingDays;
+  const parsedReserveRate = parseFloat(settings.serviceReservePerKm);
+  const serviceReserveRate = !isNaN(parsedReserveRate) ? Math.max(0, parsedReserveRate) : 2;
+  const todayServiceFund = summary.totalEffectiveDistance * serviceReserveRate;
+
+  const positiveProfit = Math.max(0, summary.totalNetProfit);
+  const fixedFilled = Math.min(dailyFixedGoal, positiveProfit);
+  const fixedProgress = dailyFixedGoal > 0 ? (fixedFilled / dailyFixedGoal) * 100 : 100;
+  const fixedRemaining = Math.max(0, dailyFixedGoal - fixedFilled);
+
+  const profitAfterFixed = Math.max(0, positiveProfit - dailyFixedGoal);
+  const foodFilled = Math.min(dailyFoodGoal, profitAfterFixed);
+  const foodProgress = dailyFoodGoal > 0 ? (foodFilled / dailyFoodGoal) * 100 : (fixedProgress >= 100 ? 100 : 0);
+  const foodRemaining = Math.max(0, dailyFoodGoal - foodFilled);
+
+  const extraSavings = Math.max(0, positiveProfit - (dailyFixedGoal + dailyFoodGoal));
 
   // Shift Hours & Hourly Rate calculation
   const parsedShiftHours = parseFloat(shiftHours) || 0;
@@ -380,48 +401,158 @@ export default function TrackerTab({ t, settings, setSettings }) {
           </div>
         </div>
 
-        {/* Daily Leasing / Target Progress Bar */}
-        {dailyTarget > 0 && (
-          <div className="mt-3.5 pt-3 border-t border-slate-800/80">
-            <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className="text-slate-400 flex items-center gap-1 font-medium">
-                <Target className="w-3.5 h-3.5 text-purple-400" />
-                {t.dailyProgress}
+        {/* Adaptive Daily Target / Monthly Budget Split Section */}
+        {targetMode === 'monthly' ? (
+          <div className="mt-3.5 pt-3 border-t border-slate-800/80 space-y-2.5">
+            {/* Header + Tier 1: Service Fund Set-Aside Cyan Badge */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-xs text-slate-300 flex items-center gap-1 font-bold">
+                <Target className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                {t.monthlyBudgetGoals}
               </span>
-              <span className="font-mono font-bold text-slate-200">
-                {Math.round(Math.min(100, Math.max(0, targetProgress)))}%
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/35 text-cyan-300">
+                <Wrench className="w-3 h-3 text-cyan-400 shrink-0" />
+                <span>{t.serviceFundSetAside}:</span>
+                <span>{formatLKR(todayServiceFund)}</span>
               </span>
             </div>
 
-            {/* Visual Bar */}
-            <div className="w-full bg-slate-950 rounded-full h-2.5 p-0.5 border border-slate-800 overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-700 ${
-                  targetProgress >= 100
-                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-sm shadow-emerald-400/50'
-                    : 'bg-gradient-to-r from-amber-500 to-emerald-500'
-                }`}
-                style={{ width: `${Math.min(100, Math.max(0, targetProgress))}%` }}
-              />
+            {/* Tier 2: Fixed Expenses Progress Bar */}
+            <div className="bg-slate-950/60 border border-slate-800/70 rounded-xl p-2.5">
+              <div className="flex items-center justify-between text-[11px] mb-1.5">
+                <span className="text-slate-300 font-semibold flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${fixedProgress >= 100 ? 'bg-emerald-400' : 'bg-purple-400'}`} />
+                  {t.fixedExpensesTier}
+                </span>
+                <span className={`font-mono font-bold ${fixedProgress >= 100 ? 'text-emerald-400' : 'text-purple-300'}`}>
+                  {Math.round(Math.min(100, Math.max(0, fixedProgress)))}%
+                </span>
+              </div>
+              <div className="w-full bg-slate-900 rounded-full h-2 p-0.5 border border-slate-800 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${
+                    fixedProgress >= 100
+                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-sm shadow-emerald-400/50'
+                      : 'bg-gradient-to-r from-purple-500 to-sky-400'
+                  }`}
+                  style={{ width: `${Math.min(100, Math.max(0, fixedProgress))}%` }}
+                />
+              </div>
+              <div className="flex justify-between items-center text-[10px] mt-1 font-mono">
+                <span className="text-slate-400">
+                  {formatLKR(fixedFilled)} / {formatLKR(dailyFixedGoal)}
+                </span>
+                {fixedProgress >= 100 ? (
+                  <span className="text-emerald-400 font-bold flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    {t.tierCovered}
+                  </span>
+                ) : (
+                  <span className="text-amber-400 font-semibold">
+                    {t.targetRemaining} {formatLKR(fixedRemaining)}
+                  </span>
+                )}
+              </div>
             </div>
 
-            {/* Target Status Labels */}
-            <div className="flex justify-between items-center text-[10px] mt-1.5 font-mono">
-              <span className="text-slate-400">
-                {formatLKR(summary.totalNetProfit)} / {formatLKR(dailyTarget)}
-              </span>
-              {targetProgress >= 100 ? (
-                <span className="text-emerald-400 font-bold flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" />
-                  {targetExceeded > 0 ? `+${formatLKR(targetExceeded)}` : t.targetReached}
+            {/* Tier 3: Food & Living Progress Bar (fills sequentially after Fixed reaches 100%) */}
+            <div className="bg-slate-950/60 border border-slate-800/70 rounded-xl p-2.5">
+              <div className="flex items-center justify-between text-[11px] mb-1.5">
+                <span className="text-slate-300 font-semibold flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${foodProgress >= 100 ? 'bg-emerald-400' : fixedProgress >= 100 ? 'bg-amber-400' : 'bg-slate-600'}`} />
+                  {t.foodLivingTier}
                 </span>
-              ) : (
-                <span className="text-amber-400 font-semibold">
-                  {t.targetRemaining} {formatLKR(targetRemaining)}
+                <span className={`font-mono font-bold ${foodProgress >= 100 ? 'text-emerald-400' : fixedProgress >= 100 ? 'text-amber-300' : 'text-slate-500'}`}>
+                  {Math.round(Math.min(100, Math.max(0, foodProgress)))}%
                 </span>
-              )}
+              </div>
+              <div className="w-full bg-slate-900 rounded-full h-2 p-0.5 border border-slate-800 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${
+                    foodProgress >= 100
+                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-sm shadow-emerald-400/50'
+                      : 'bg-gradient-to-r from-amber-500 to-emerald-500'
+                  }`}
+                  style={{ width: `${Math.min(100, Math.max(0, foodProgress))}%` }}
+                />
+              </div>
+              <div className="flex justify-between items-center text-[10px] mt-1 font-mono">
+                <span className="text-slate-400">
+                  {formatLKR(foodFilled)} / {formatLKR(dailyFoodGoal)}
+                </span>
+                {foodProgress >= 100 ? (
+                  <span className="text-emerald-400 font-bold flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    {t.tierCovered}
+                  </span>
+                ) : fixedProgress < 100 ? (
+                  <span className="text-slate-500 font-sans">
+                    {t.fillsAfterFixed}
+                  </span>
+                ) : (
+                  <span className="text-amber-400 font-semibold">
+                    {t.targetRemaining} {formatLKR(foodRemaining)}
+                  </span>
+                )}
+              </div>
             </div>
+
+            {/* Extra Savings Badge once both Fixed & Food reach 100% */}
+            {fixedProgress >= 100 && foodProgress >= 100 && (
+              <div className="flex items-center justify-between bg-emerald-500/15 border border-emerald-500/40 rounded-xl px-3 py-2 animate-fade-in">
+                <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  {t.extraSavingsLabel}
+                </span>
+                <span className="font-mono font-black text-sm text-emerald-400">
+                  +{formatLKR(extraSavings)}
+                </span>
+              </div>
+            )}
           </div>
+        ) : (
+          dailyTarget > 0 && (
+            <div className="mt-3.5 pt-3 border-t border-slate-800/80">
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <span className="text-slate-400 flex items-center gap-1 font-medium">
+                  <Target className="w-3.5 h-3.5 text-purple-400" />
+                  {t.dailyProgress}
+                </span>
+                <span className="font-mono font-bold text-slate-200">
+                  {Math.round(Math.min(100, Math.max(0, targetProgress)))}%
+                </span>
+              </div>
+
+              {/* Visual Bar */}
+              <div className="w-full bg-slate-950 rounded-full h-2.5 p-0.5 border border-slate-800 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${
+                    targetProgress >= 100
+                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-sm shadow-emerald-400/50'
+                      : 'bg-gradient-to-r from-amber-500 to-emerald-500'
+                  }`}
+                  style={{ width: `${Math.min(100, Math.max(0, targetProgress))}%` }}
+                />
+              </div>
+
+              {/* Target Status Labels */}
+              <div className="flex justify-between items-center text-[10px] mt-1.5 font-mono">
+                <span className="text-slate-400">
+                  {formatLKR(summary.totalNetProfit)} / {formatLKR(dailyTarget)}
+                </span>
+                {targetProgress >= 100 ? (
+                  <span className="text-emerald-400 font-bold flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    {targetExceeded > 0 ? `+${formatLKR(targetExceeded)}` : t.targetReached}
+                  </span>
+                ) : (
+                  <span className="text-amber-400 font-semibold">
+                    {t.targetRemaining} {formatLKR(targetRemaining)}
+                  </span>
+                )}
+              </div>
+            </div>
+          )
         )}
       </div>
 

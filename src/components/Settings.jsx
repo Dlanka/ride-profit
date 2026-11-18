@@ -27,6 +27,12 @@ export function loadSettings() {
         firstKmFare: isThreeWheeler ? 100 : 75,
         secondKmRate: isThreeWheeler ? 85 : 55,
         waitingRatePerMin: isThreeWheeler ? 5 : 4,
+        targetMode: 'simple',
+        dailyTarget: 4040,
+        monthlyFixedExpenses: 71000,
+        monthlyFoodExpenses: 30000,
+        workingDaysPerMonth: 25,
+        serviceReservePerKm: 2,
         defaultCommission: 16,
         defaultDeduction: 0,
         serviceInterval: isThreeWheeler ? 3000 : 2500,
@@ -60,6 +66,12 @@ export default function SettingsTab({ t, settings, setSettings }) {
   const fuelCostPerKm = calcFuelCostPerKm(localSettings.petrolPrice, localSettings.kmPerLiter);
   const totalCostPerKm = calcTotalCostPerKm(localSettings.petrolPrice, localSettings.kmPerLiter, localSettings.maintenancePerKm);
 
+  const activeTargetMode = localSettings.targetMode || 'simple';
+  const workingDays = Math.max(1, parseFloat(localSettings.workingDaysPerMonth) || 25);
+  const dailyFixedPreview = Math.round((parseFloat(localSettings.monthlyFixedExpenses) || 0) / workingDays);
+  const dailyFoodPreview = Math.round((parseFloat(localSettings.monthlyFoodExpenses) || 0) / workingDays);
+  const dailyTotalPreview = dailyFixedPreview + dailyFoodPreview;
+
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 2500);
@@ -74,7 +86,12 @@ export default function SettingsTab({ t, settings, setSettings }) {
         kmPerLiter: preset.kmPerLiter,
         petrolPrice: preset.petrolPrice,
         maintenancePerKm: preset.maintenancePerKm,
-        dailyTarget: preset.dailyTarget,
+        targetMode: localSettings.targetMode ?? 'simple',
+        dailyTarget: localSettings.dailyTarget ?? 4040,
+        monthlyFixedExpenses: localSettings.monthlyFixedExpenses ?? 71000,
+        monthlyFoodExpenses: localSettings.monthlyFoodExpenses ?? 30000,
+        workingDaysPerMonth: localSettings.workingDaysPerMonth ?? 25,
+        serviceReservePerKm: localSettings.serviceReservePerKm ?? 2,
         firstKmFare: preset.firstKmFare,
         secondKmRate: preset.secondKmRate,
         waitingRatePerMin: preset.waitingRatePerMin ?? (type === 'threeWheeler' ? 5 : 4),
@@ -326,28 +343,193 @@ export default function SettingsTab({ t, settings, setSettings }) {
             Covers engine oil, tire wear, brake pads, and general vehicle servicing.
           </p>
         </div>
+      </div>
 
-        {/* Daily Leasing / Target Goal */}
-        <div>
-          <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 mb-1.5">
+      {/* Unified Daily Goal & Expense Planner Card */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-lg shadow-black/20">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0">
             <Target className="w-4 h-4 text-purple-400" />
-            {t.dailyTarget}
-          </label>
-          <div className="relative">
-            <input
-              type="number"
-              step="100"
-              value={localSettings.dailyTarget || ''}
-              onChange={(e) => setLocalSettings((prev) => ({ ...prev, dailyTarget: parseFloat(e.target.value) || 0 }))}
-              className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-500 font-medium text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all font-mono"
-              placeholder="e.g. 1600"
-            />
-            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
-              LKR
-            </span>
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">{t.dailyTargetHint}</p>
+          <div>
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider leading-tight">
+              {t.goalPlannerTitle}
+            </h3>
+            <p className="text-[10px] text-slate-400">{t.goalPlannerSub}</p>
+          </div>
         </div>
+
+        {/* 2-Mode Segmented Toggle: Simple Daily Target | Monthly Budget Split */}
+        <div className="flex bg-slate-950 border border-slate-800 rounded-xl p-1 gap-1">
+          <button
+            type="button"
+            onClick={() => updateField('targetMode', 'simple')}
+            className={`flex-1 py-2 px-2 rounded-lg text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap text-center ${
+              activeTargetMode === 'simple'
+                ? 'bg-purple-500/20 border border-purple-500/50 text-purple-300 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            {t.targetModeSimple}
+          </button>
+          <button
+            type="button"
+            onClick={() => updateField('targetMode', 'monthly')}
+            className={`flex-1 py-2 px-2 rounded-lg text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap text-center ${
+              activeTargetMode === 'monthly'
+                ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            {t.targetModeMonthly}
+          </button>
+        </div>
+
+        {activeTargetMode === 'simple' ? (
+          /* Mode 1: Simple Daily Net Profit Target */
+          <div>
+            <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 mb-1.5">
+              <Target className="w-4 h-4 text-purple-400" />
+              {t.dailyNetProfitTarget}
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                step="100"
+                min="0"
+                value={localSettings.dailyTarget ?? ''}
+                onChange={(e) => updateField('dailyTarget', e.target.value === '' ? 0 : Math.max(0, parseFloat(e.target.value) || 0))}
+                className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-500 font-medium text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all font-mono"
+                placeholder="4040"
+              />
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
+                LKR
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-400 mt-1">{t.dailyTargetHideHint}</p>
+          </div>
+        ) : (
+          /* Mode 2: Monthly Budget Split */
+          <div className="space-y-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* 1. Monthly Fixed Expenses */}
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                  {t.monthlyFixedExpenses}
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="1000"
+                    min="0"
+                    value={localSettings.monthlyFixedExpenses ?? ''}
+                    onChange={(e) => updateField('monthlyFixedExpenses', e.target.value === '' ? 0 : Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-500 font-medium text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 outline-none transition-all font-mono"
+                    placeholder="71000"
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
+                    LKR
+                  </span>
+                </div>
+              </div>
+
+              {/* 2. Monthly Food & Living */}
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                  {t.monthlyFoodExpenses}
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="1000"
+                    min="0"
+                    value={localSettings.monthlyFoodExpenses ?? ''}
+                    onChange={(e) => updateField('monthlyFoodExpenses', e.target.value === '' ? 0 : Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-500 font-medium text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 outline-none transition-all font-mono"
+                    placeholder="30000"
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
+                    LKR
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* 3. Working Days / Month + Quick Pills */}
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                  {t.workingDaysPerMonth}
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="1"
+                    min="1"
+                    max="31"
+                    value={localSettings.workingDaysPerMonth ?? ''}
+                    onChange={(e) => updateField('workingDaysPerMonth', Math.max(1, Math.min(31, parseFloat(e.target.value) || 1)))}
+                    className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-500 font-medium text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 outline-none transition-all font-mono"
+                    placeholder="25"
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
+                    {t.daysUnit}
+                  </span>
+                </div>
+                {/* Quick Working Days Pills */}
+                <div className="grid grid-cols-5 gap-1 mt-1.5">
+                  {[20, 22, 25, 26, 30].map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => updateField('workingDaysPerMonth', d)}
+                      className={`text-[11px] py-1 rounded-lg border font-mono font-bold transition-all text-center ${
+                        Number(localSettings.workingDaysPerMonth) === d
+                          ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                      }`}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. Service Reserve (LKR/km) */}
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                  {t.serviceReservePerKm}
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={localSettings.serviceReservePerKm ?? ''}
+                    onChange={(e) => updateField('serviceReservePerKm', e.target.value === '' ? 0 : Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-500 font-medium text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 outline-none transition-all font-mono"
+                    placeholder="2"
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
+                    LKR/km
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Compact Live Daily Goals Summary Pill */}
+            <div className="bg-slate-950/90 border border-emerald-500/30 rounded-xl px-3 py-2.5 text-center">
+              <p className="text-[11px] sm:text-xs font-mono text-slate-300 leading-relaxed">
+                <span className="text-slate-400 font-sans font-semibold mr-1">{t.dailyGoalsSummaryPrefix}</span>
+                <span className="text-purple-300 font-bold">{t.fixedShort} LKR {dailyFixedPreview.toLocaleString('en-US')}</span>
+                <span className="text-slate-500 mx-1">+</span>
+                <span className="text-amber-300 font-bold">{t.foodShort} LKR {dailyFoodPreview.toLocaleString('en-US')}</span>
+                <span className="text-slate-500 mx-1">=</span>
+                <span className="text-emerald-400 font-black">LKR {dailyTotalPreview.toLocaleString('en-US')}{t.perDaySuffix}</span>
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Meter Fare Rates Configuration */}
