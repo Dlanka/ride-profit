@@ -48,22 +48,39 @@ export function calcHireProfit({
   hireType = 'app',
   isGross = false,
   commissionRate,
+  passengerDeduction,
   paymentMethod = 'cash',
 }) {
   const { petrolPrice, kmPerLiter, maintenancePerKm } = settings;
   const effectiveCommission = commissionRate !== undefined ? commissionRate : (settings?.defaultCommission ?? 16);
-  
-  let netEarnings = earnings;
-  let commissionAmount = 0;
+  const effectiveDeduction = passengerDeduction !== undefined ? passengerDeduction : (settings?.defaultDeduction ?? 0);
 
-  if (isGross && hireType === 'app') {
-    commissionAmount = earnings * (effectiveCommission / 100);
-    netEarnings = earnings - commissionAmount;
-  } else if (hireType === 'road') {
-    commissionAmount = 0;
+  let netEarnings = earnings;
+  let grossFare = earnings;
+  let commissionAmount = 0;
+  let deductionAmount = 0;
+
+  if (hireType === 'app') {
+    if (isGross) {
+      grossFare = earnings;
+      commissionAmount = grossFare * (effectiveCommission / 100);
+      deductionAmount = effectiveDeduction;
+      netEarnings = Math.max(0, grossFare - commissionAmount - deductionAmount);
+    } else {
+      netEarnings = earnings;
+      deductionAmount = effectiveDeduction;
+      const factor = 1 - effectiveCommission / 100;
+      grossFare = factor > 0 ? (netEarnings + deductionAmount) / factor : netEarnings + deductionAmount;
+      commissionAmount = Math.max(0, grossFare - netEarnings - deductionAmount);
+    }
+  } else {
+    grossFare = earnings;
     netEarnings = earnings;
+    commissionAmount = 0;
+    deductionAmount = 0;
   }
 
+  const appFees = hireType === 'app' ? Math.max(0, grossFare - netEarnings) : 0;
   const effectiveDistance = isRoundTrip ? tripDistance * 2 : tripDistance;
   const fuelCostPerKm = calcFuelCostPerKm(petrolPrice, kmPerLiter);
   const fuelCost = fuelCostPerKm * effectiveDistance;
@@ -73,8 +90,10 @@ export function calcHireProfit({
 
   return {
     earnings: netEarnings,
-    grossFare: isGross ? earnings : (hireType === 'app' ? netEarnings / (1 - effectiveCommission / 100) : netEarnings),
+    grossFare,
     commissionAmount,
+    deductionAmount,
+    appFees,
     tripDistance,
     effectiveDistance,
     fuelCost,
@@ -186,6 +205,10 @@ export function aggregateHires(hires) {
   if (!hires || hires.length === 0) {
     return {
       totalEarnings: 0,
+      totalGrossEarnings: 0,
+      totalAppGrossEarnings: 0,
+      totalNetAppPayout: 0,
+      totalAppFees: 0,
       totalFuelCost: 0,
       totalMaintenanceCost: 0,
       totalCost: 0,
@@ -201,21 +224,36 @@ export function aggregateHires(hires) {
   return hires.reduce(
     (acc, hire) => {
       const isCard = hire.paymentMethod === 'card';
+      const isApp = hire.hireType !== 'road';
+      const netVal = hire.earnings || 0;
+      const grossVal = isApp ? (hire.grossFare || netVal) : netVal;
+      const appFeeVal = isApp
+        ? (hire.appFees !== undefined ? hire.appFees : Math.max(0, grossVal - netVal))
+        : 0;
+
       return {
-        totalEarnings: acc.totalEarnings + (hire.earnings || 0),
+        totalEarnings: acc.totalEarnings + netVal,
+        totalGrossEarnings: acc.totalGrossEarnings + grossVal,
+        totalAppGrossEarnings: acc.totalAppGrossEarnings + (isApp ? grossVal : 0),
+        totalNetAppPayout: acc.totalNetAppPayout + (isApp ? netVal : 0),
+        totalAppFees: acc.totalAppFees + appFeeVal,
         totalFuelCost: acc.totalFuelCost + (hire.fuelCost || 0),
         totalMaintenanceCost: acc.totalMaintenanceCost + (hire.maintenanceCost || 0),
         totalCost: acc.totalCost + (hire.totalCost || 0),
         totalNetProfit: acc.totalNetProfit + (hire.netProfit || 0),
         totalDistance: acc.totalDistance + (hire.tripDistance || 0),
         totalEffectiveDistance: acc.totalEffectiveDistance + (hire.effectiveDistance || 0),
-        totalCashEarnings: acc.totalCashEarnings + (isCard ? 0 : (hire.earnings || 0)),
-        totalCardEarnings: acc.totalCardEarnings + (isCard ? (hire.earnings || 0) : 0),
+        totalCashEarnings: acc.totalCashEarnings + (isCard ? 0 : netVal),
+        totalCardEarnings: acc.totalCardEarnings + (isCard ? netVal : 0),
         hireCount: acc.hireCount + 1,
       };
     },
     {
       totalEarnings: 0,
+      totalGrossEarnings: 0,
+      totalAppGrossEarnings: 0,
+      totalNetAppPayout: 0,
+      totalAppFees: 0,
       totalFuelCost: 0,
       totalMaintenanceCost: 0,
       totalCost: 0,

@@ -178,6 +178,7 @@ export default function TrackerTab({ t, settings, setSettings }) {
       settings,
       hireType,
       commissionRate: settings?.defaultCommission ?? 16,
+      passengerDeduction: settings?.defaultDeduction ?? 0,
       paymentMethod,
     });
 
@@ -316,9 +317,24 @@ export default function TrackerTab({ t, settings, setSettings }) {
 
         {/* Breakdown Metric Grid */}
         <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-800/80">
-          <div className="bg-slate-950/60 rounded-xl p-2.5 border border-slate-800/60">
+          <div className="col-span-2 bg-slate-950/60 rounded-xl p-2.5 border border-slate-800/60">
             <span className="text-[10px] text-slate-400 block mb-0.5">{t.appEarnings}</span>
-            <span className="font-mono font-bold text-slate-100">{formatLKR(summary.totalEarnings)}</span>
+            <span className="font-mono font-bold text-slate-100 text-sm block">
+              {formatLKR(summary.totalGrossEarnings)}
+            </span>
+            <div className="text-[10px] mt-1 pt-1 border-t border-slate-800/70 flex items-center justify-between gap-2">
+              <span className="text-slate-400 font-medium">{t.netAppPayout}</span>
+              <span className="font-mono font-bold text-emerald-400">
+                {formatLKR(summary.totalNetAppPayout)}
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-slate-950/60 rounded-xl p-2.5 border border-amber-500/20">
+            <span className="text-[10px] text-slate-400 block mb-0.5 truncate">{t.appFeesLabel}</span>
+            <span className="font-mono font-bold text-amber-400">
+              -{formatLKR(summary.totalAppFees)}
+            </span>
           </div>
 
           <div className="bg-slate-950/60 rounded-xl p-2.5 border border-slate-800/60">
